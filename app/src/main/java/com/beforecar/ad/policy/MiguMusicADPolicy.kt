@@ -15,4 +15,9 @@ class MiguMusicADPolicy : IHookPolicy {
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
 
     }
+
+    override fun getPackageName(): String {
+        return "cmccwm.mobilemusic"
+    }
+
 }

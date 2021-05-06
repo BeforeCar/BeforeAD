@@ -22,8 +22,12 @@ class BeforeADInit : IXposedHookLoadPackage {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
-        appPolicies.forEach {
-            it.handleLoadPackage(lpparam)
+        lpparam?.run {
+            appPolicies.forEach {
+                if (this.packageName == it.getPackageName()) {
+                    it.handleLoadPackage(lpparam)
+                }
+            }
         }
     }
 }

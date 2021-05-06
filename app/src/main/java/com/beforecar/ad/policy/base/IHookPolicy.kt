@@ -13,4 +13,6 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 interface IHookPolicy {
 
     fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?)
+
+    fun getPackageName(): String
 }
