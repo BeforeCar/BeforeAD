@@ -20,8 +20,6 @@ abstract class IHookPolicy {
 
     open val TAG: String = "tag_hook"
 
-    protected var handler: Handler? = null
-
     abstract fun getPackageName(): String
 
     @CallSuper
@@ -35,7 +33,6 @@ abstract class IHookPolicy {
             XposedHelpers.findAndHookMethod(
                 Application::class.java, "onCreate", object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        handler = Handler(Looper.getMainLooper())
                         val application = param.thisObject as Application
                         val classLoader = application.classLoader!!
                         onApplicationCreate(application, classLoader)
@@ -76,17 +73,16 @@ abstract class IHookPolicy {
     }
 
     /**
-     * 只有主进程创建完成调用才会运行
+     * 获取当前进程的 Looper.getMainLooper() 并执行任务
+     * 虽然每次都创建 Handler 实例, 但是会比较安全
+     * todo 注意这里可能会有问题 wangpan
      */
     fun runOnUIThread(runnable: Runnable) {
-        handler?.post(runnable)
+        Handler(Looper.getMainLooper()).post(runnable)
     }
 
-    /**
-     * 只有主进程创建完成调用才会运行
-     */
     fun showToast(context: Context, msg: String, duration: Int = Toast.LENGTH_SHORT) {
-        handler?.post {
+        runOnUIThread {
             Toast.makeText(context, msg, duration).show()
         }
     }
