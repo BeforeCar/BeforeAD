@@ -11,9 +11,10 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  * Date:
  *
  */
-class MiguMusicADPolicy : IHookPolicy {
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
+class MiguMusicADPolicy : IHookPolicy() {
 
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        super.handleLoadPackage(lpparam)
     }
 
     override fun getPackageName(): String {
