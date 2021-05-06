@@ -1,8 +1,6 @@
 package com.beforecar.ad.init
 
-import com.beforecar.ad.policy.MiguMusicADPolicy
-import com.beforecar.ad.policy.XiaoMiMarketHookPolicy
-import com.beforecar.ad.policy.XiaoMiShopHookPolicy
+import com.beforecar.ad.policy.*
 import com.beforecar.ad.policy.base.IHookPolicy
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -23,6 +21,8 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(MiguMusicADPolicy())
         appPolicies.add(XiaoMiMarketHookPolicy())
         appPolicies.add(XiaoMiShopHookPolicy())
+        appPolicies.add(MiJiaHookPolicy())
+        appPolicies.add(MobileTicketHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
