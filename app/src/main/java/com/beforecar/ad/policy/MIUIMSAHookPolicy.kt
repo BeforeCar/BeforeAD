@@ -14,6 +14,8 @@ import de.robv.android.xposed.XposedHelpers
  */
 class MIUIMSAHookPolicy : IHookPolicy() {
 
+    override val TAG: String = "tag_msa"
+
     override fun getPackageName(): String {
         return "com.miui.systemAdSolution"
     }
