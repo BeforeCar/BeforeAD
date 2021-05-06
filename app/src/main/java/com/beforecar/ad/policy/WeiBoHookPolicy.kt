@@ -71,10 +71,16 @@ object WeiBoHookPolicy : IHookPolicy() {
             try {
                 val activity = param.args[0] as? Activity
                 val intent = param.args[1] as? Intent
-                if (activity != null && intent != null && !activity.isFinishing) {
+                if (activity != null && !activity.isFinishing) {
                     isSkipedField.set(param.thisObject, true)
-                    intent.flags = 268435456
-                    activity.startActivity(intent)
+                    /**
+                     * 1.app启动的时候闪屏页广告的intent不为null
+                     * 2.app从后台切回前台(超过一定时间)intent为null
+                     */
+                    if (intent != null) {
+                        intent.flags = 268435456
+                        activity.startActivity(intent)
+                    }
                     dismissMethod.invoke(param.thisObject, false)
                     //阻止调用原方法
                     param.result = null
