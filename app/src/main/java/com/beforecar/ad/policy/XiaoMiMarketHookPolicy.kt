@@ -3,6 +3,7 @@ package com.beforecar.ad.policy
 import android.app.Activity
 import android.app.Application
 import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
 
