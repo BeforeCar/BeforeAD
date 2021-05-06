@@ -1,8 +1,11 @@
 package com.beforecar.ad.policy.base
 
 import android.app.Application
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.annotation.CallSuper
-import com.beforecar.ad.utils.AppUtils
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -17,6 +20,8 @@ abstract class IHookPolicy {
 
     open val TAG: String = "tag_hook"
 
+    protected var handler: Handler? = null
+
     abstract fun getPackageName(): String
 
     @CallSuper
@@ -30,10 +35,11 @@ abstract class IHookPolicy {
             XposedHelpers.findAndHookMethod(
                 Application::class.java, "onCreate", object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
+                        handler = Handler(Looper.getMainLooper())
                         val application = param.thisObject as Application
                         val classLoader = application.classLoader!!
                         onApplicationCreate(application, classLoader)
-                        if (AppUtils.getProcessName(application) == packageName) {
+                        if (application.getProcessName() == packageName) {
                             log("onMainApplicationCreate: $packageName")
                             onMainApplicationCreate(application, classLoader)
                         }
@@ -58,11 +64,31 @@ abstract class IHookPolicy {
         XposedBridge.log("$TAG: $content")
     }
 
-    fun Throwable.getStackInfo(): String {
-        val sb = StringBuilder(this.toString())
-        for (s in this.stackTrace) {
-            sb.append("\n").append(s.toString())
+    /**
+     * 打印当前堆栈信息
+     */
+    fun printStackInfo() {
+        try {
+            throw Exception()
+        } catch (e: Exception) {
+            log(e.getStackInfo())
         }
-        return sb.toString()
     }
+
+    /**
+     * 只有主进程创建完成调用才会运行
+     */
+    fun runOnUIThread(runnable: Runnable) {
+        handler?.post(runnable)
+    }
+
+    /**
+     * 只有主进程创建完成调用才会运行
+     */
+    fun showToast(context: Context, msg: String, duration: Int = Toast.LENGTH_SHORT) {
+        handler?.post {
+            Toast.makeText(context, msg, duration).show()
+        }
+    }
+
 }

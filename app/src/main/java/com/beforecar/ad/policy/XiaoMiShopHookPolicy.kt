@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.pm.ShortcutManager
 import android.os.Build
 import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
