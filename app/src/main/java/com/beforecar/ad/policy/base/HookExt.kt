@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.os.Process
+import java.lang.reflect.Field
 
 fun Throwable.getStackInfo(): String {
     val sb = StringBuilder(this.toString())
@@ -43,4 +44,29 @@ fun Context.getProcessName(): String {
         }
         result
     } ?: ""
+}
+
+fun Any?.getFieldsParams(): String {
+    if (this == null) {
+        return ""
+    }
+    val fields = this.javaClass.declaredFields
+    if (fields.isEmpty()) {
+        return ""
+    }
+    val params = StringBuilder()
+    for (field in fields) {
+        val value = field.getValueSafety(this)
+        params.append("${field.name}=$value, ")
+    }
+    return params.toString()
+}
+
+fun Field.getValueSafety(obj: Any): Any? {
+    return try {
+        this.isAccessible = true
+        this.get(obj)
+    } catch (t: Throwable) {
+        null
+    }
 }
