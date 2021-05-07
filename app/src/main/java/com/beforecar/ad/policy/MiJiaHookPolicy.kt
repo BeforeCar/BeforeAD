@@ -8,7 +8,7 @@ import de.robv.android.xposed.XposedHelpers
 
 /**
  * @author: wangpan
- * @emial: p.wang@aftership.com
+ * @email: p.wang@aftership.com
  * @date: 2021/5/6
  * 米家
  */

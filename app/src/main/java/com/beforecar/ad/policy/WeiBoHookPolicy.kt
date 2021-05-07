@@ -12,7 +12,7 @@ import java.lang.reflect.Method
 
 /**
  * @author: wangpan
- * @emial: p.wang@aftership.com
+ * @email: p.wang@aftership.com
  * @date: 2021/5/6
  * 微博
  */

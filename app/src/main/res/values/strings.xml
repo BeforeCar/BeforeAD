@@ -19,5 +19,6 @@
         <item>com.MobileTicket</item>
         <item>com.xiaomi.smarthome</item>
         <item>com.miui.systemAdSolution</item>
+        <item>com.baidu.searchbox</item>
     </string-array>
 </resources>
