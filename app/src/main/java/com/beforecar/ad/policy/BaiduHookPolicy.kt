@@ -6,6 +6,7 @@ import com.beforecar.ad.policy.base.IHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -25,14 +26,229 @@ class BaiduHookPolicy : IHookPolicy() {
     override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
-        //首页推荐列表
-        removeFeedListAdItems(classLoader)
-        //详情页评论列表
-        removeDetailCommentListAdItems(classLoader)
-        //视频详情页推荐广告
-        removeVideoDetailRecommendAdItems(classLoader)
         //闪屏页广告
         removeSplashAd(classLoader)
+    }
+
+    /**
+     * hook okhttp BridgeInterceptor
+     */
+    private fun hookBridgeInterceptor(classLoader: ClassLoader) {
+        try {
+            log("hookBridgeInterceptor start")
+            val interceptorCls = XposedHelpers.findClass("okhttp3.internal.http.BridgeInterceptor", classLoader)
+            val chainCls = XposedHelpers.findClass("okhttp3.Interceptor\$Chain", classLoader)
+            XposedHelpers.findAndHookMethod(interceptorCls, "intercept", chainCls, object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val chain = param.args[0] as Any
+                    val url = getUrlFromChain(chain)
+                    val response = param.result ?: return
+                    when {
+                        //推荐列表
+                        url.contains("cmd=100") -> {
+                            log("removeFeedListAdItems api start")
+                            val newResponse = removeFeedListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeFeedListAdItems api success")
+                            }
+                        }
+                        //详情页评论列表广告
+                        url.contains("cmd=308") -> {
+                            log("removeDetailCommentListAdItems api start")
+                            val emptyResponse = buildEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeDetailCommentListAdItems api success")
+                            }
+                        }
+                        //图文新闻详情页推荐广告
+                        url.contains("newspage/api/getmobads") -> {
+                            log("removeDetailRecommendAdItems api start")
+                            val emptyResponse = buildEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeDetailRecommendAdItems api success")
+                            }
+                        }
+                        //视频新闻详情页广告
+                        url.contains("cmd=207") -> {
+                            log("removeVideoDetailAdItems api start")
+                            val emptyResponse = buildEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeVideoDetailAdItems api success")
+                            }
+                        }
+                        //视频新闻详情页推荐广告
+                        url.contains("cmd=185") -> {
+                            log("removeVideoDetailRecommendAdItems api start")
+                            val newResponse = removeVideoDetailRecommendAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeVideoDetailRecommendAdItems api success")
+                            }
+                        }
+                        //splash ad
+                        url.contains("action=update") -> {
+                            log("removeSplashAd api start")
+                            val emptyResponse = buildEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeSplashAd api success")
+                            }
+                        }
+                        //检测更新
+                        url.contains("cmd=301") -> {
+                            log("removeAppUpgrade api start")
+                            val emptyResponse = buildEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeAppUpgrade api success")
+                            }
+                        }
+                    }
+                }
+
+                private fun getUrlFromChain(chain: Any): String {
+                    try {
+                        val request = XposedHelpers.callMethod(chain, "request") as Any
+                        val httpUrl = XposedHelpers.callMethod(request, "url") as Any
+                        return XposedHelpers.callMethod(httpUrl, "toString") as String
+                    } catch (t: Throwable) {
+                        log("getUrlFromChain fail: ${t.getStackInfo()}")
+                    }
+                    return ""
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookBridgeInterceptor fail: ${t.getStackInfo()}")
+        }
+    }
+
+    /**
+     * 移除推荐列表的广告
+     */
+    private fun removeFeedListAdItems(response: Any): Any? {
+        try {
+            val string = getResponseString(response)
+            val newString = removeFeedListAdString(string)
+            return createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeFeedListAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeFeedListAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data") ?: return string
+            val cmd = data.optJSONObject("100") ?: return string
+            val itemList = cmd.optJSONObject("itemlist") ?: return string
+            val items = itemList.optJSONArray("items") ?: return string
+            var adItemCount = 0
+            for (index in 0 until items.length()) {
+                val item = items.getJSONObject(index)
+                val itemData = item.optJSONObject("data") ?: continue
+                val mode = itemData.optString("mode")
+                if (mode == "ad") {
+                    item.put("data", "")
+                    adItemCount++
+                }
+            }
+            log("removeFeedListAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeFeedListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 视频详情页推荐广告
+     */
+    private fun removeVideoDetailRecommendAdItems(response: Any): Any? {
+        try {
+            val string = getResponseString(response)
+            val newString = removeVideoDetailRecommendAdString(string)
+            return createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeFeedListAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeVideoDetailRecommendAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data") ?: return string
+            val cmd = data.optJSONObject("185") ?: return string
+            val adTpl = cmd.optJSONObject("adTpl")
+            if (adTpl != null) {
+                cmd.put("adTpl", "")
+                log("removeVideoDetailRecommendAdString adTpl success")
+            }
+            val relate = cmd.optJSONObject("relate")
+            if (relate != null) {
+                val list = relate.optJSONArray("list") ?: JSONArray()
+                var adItemCount = 0
+                for (index in 0 until list.length()) {
+                    val item = list.getJSONObject(index)
+                    val vType = item.optInt("vType")
+                    if (vType == 2) {
+                        item.put("data", "")
+                        adItemCount++
+                    }
+                }
+                log("removeVideoDetailRecommendAdString relate success: $adItemCount")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeVideoDetailRecommendAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    @Throws(Throwable::class)
+    private fun getResponseString(response: Any): String {
+        val body = XposedHelpers.callMethod(response, "body") ?: return ""
+        return XposedHelpers.callMethod(body, "string") as? String ?: ""
+    }
+
+    @Throws(Throwable::class)
+    private fun createNewResponse(response: Any, string: String): Any? {
+        val classLoader = response.javaClass.classLoader
+        val responseCls = XposedHelpers.findClass("okhttp3.Response", classLoader)
+        val builderCls = XposedHelpers.findClass("okhttp3.Response\$Builder", classLoader)
+        val bodyCls = XposedHelpers.findClass("okhttp3.ResponseBody", classLoader)
+        val body = XposedHelpers.callMethod(response, "body") ?: return null
+        val mediaType = XposedHelpers.callMethod(body, "contentType")
+        val newBuilder = builderCls.getConstructor(responseCls).newInstance(response)
+        val newBody = XposedHelpers.callStaticMethod(bodyCls, "create", mediaType, string)
+        XposedHelpers.callMethod(newBuilder, "body", newBody)
+        return XposedHelpers.callMethod(newBuilder, "build")
+    }
+
+    /**
+     * 创建一个空的 response 基于给定的 response
+     */
+    private fun buildEmptyResponse(response: Any): Any? {
+        try {
+            val classLoader = response.javaClass.classLoader
+            val responseCls = XposedHelpers.findClass("okhttp3.Response", classLoader)
+            val builderCls = XposedHelpers.findClass("okhttp3.Response\$Builder", classLoader)
+            val bodyCls = XposedHelpers.findClass("okhttp3.ResponseBody", classLoader)
+            val body = XposedHelpers.callMethod(response, "body") ?: return null
+            val mediaType = XposedHelpers.callMethod(body, "contentType")
+            val emptyBody = XposedHelpers.callStaticMethod(bodyCls, "create", mediaType, "")
+            val newBuilder = builderCls.getConstructor(responseCls).newInstance(response)
+            XposedHelpers.callMethod(newBuilder, "body", emptyBody)
+            return XposedHelpers.callMethod(newBuilder, "build")
+        } catch (t: Throwable) {
+            log("buildEmptyResponseBody fail: ${t.getStackInfo()}")
+        }
+        return null
     }
 
     /**
@@ -57,232 +273,4 @@ class BaiduHookPolicy : IHookPolicy() {
         }
     }
 
-    /**
-     * hook okhttp BridgeInterceptor
-     */
-    private fun hookBridgeInterceptor(classLoader: ClassLoader) {
-        try {
-            log("hookBridgeInterceptor start")
-            val interceptorCls = XposedHelpers.findClass("okhttp3.internal.http.BridgeInterceptor", classLoader)
-            val chainCls = XposedHelpers.findClass("okhttp3.Interceptor\$Chain", classLoader)
-            XposedHelpers.findAndHookMethod(interceptorCls, "intercept", chainCls, object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val chain = param.args[0] as Any
-                    val url = getUrlFromChain(chain)
-                    val response = param.result ?: return
-                    when {
-                        //图文新闻详情页推荐广告
-                        url.contains("newspage/api/getmobads") -> {
-                            val emptyResponse = buildEmptyResponseBody(response)
-                            if (emptyResponse != null) {
-                                param.result = emptyResponse
-                                log("hookBridgeInterceptor removeDetailRecommendAdItems success")
-                            }
-                        }
-                        //视频新闻详情页广告
-                        url.contains("cmd=207") -> {
-                            val emptyResponse = buildEmptyResponseBody(response)
-                            if (emptyResponse != null) {
-                                param.result = emptyResponse
-                                log("hookBridgeInterceptor removeVideoDetailAdItems success")
-                            }
-                        }
-                        //splash ad
-                        url.contains("action=update") -> {
-                            val emptyResponse = buildEmptyResponseBody(response)
-                            if (emptyResponse != null) {
-                                param.result = emptyResponse
-                                log("hookBridgeInterceptor removeSplashAd success")
-                            }
-                        }
-                    }
-                }
-
-                private fun getUrlFromChain(chain: Any): String {
-                    try {
-                        val request = XposedHelpers.callMethod(chain, "request") as Any
-                        val httpUrl = XposedHelpers.callMethod(request, "url") as Any
-                        return XposedHelpers.callMethod(httpUrl, "toString") as String
-                    } catch (t: Throwable) {
-                        log("hookBridgeInterceptor getUrlFromChain fail: ${t.getStackInfo()}")
-                    }
-                    return ""
-                }
-
-                private fun buildEmptyResponseBody(response: Any): Any? {
-                    try {
-                        val responseCls = XposedHelpers.findClassIfExists("okhttp3.Response", classLoader)
-                        val builderCls = XposedHelpers.findClassIfExists("okhttp3.Response\$Builder", classLoader)
-                        val mediaTypeCls = XposedHelpers.findClass("okhttp3.MediaType", classLoader)
-                        val bodyCls = XposedHelpers.findClass("okhttp3.ResponseBody", classLoader)
-                        val mediaType = XposedHelpers.callStaticMethod(mediaTypeCls, "parse", "application/json;")
-                        val emptyBody = XposedHelpers.callStaticMethod(bodyCls, "create", mediaType, "")
-                        val newBuilder = builderCls.getConstructor(responseCls).newInstance(response)
-                        XposedHelpers.callMethod(newBuilder, "body", emptyBody)
-                        return XposedHelpers.callMethod(newBuilder, "build")
-                    } catch (t: Throwable) {
-                        log("hookBridgeInterceptor buildEmptyResponseBody fail: ${t.getStackInfo()}")
-                    }
-                    return null
-                }
-            })
-        } catch (t: Throwable) {
-            log("hookBridgeInterceptor fail: ${t.getStackInfo()}")
-        }
-    }
-
-    /**
-     * 视频详情页推荐广告
-     */
-    private fun removeVideoDetailRecommendAdItems(classLoader: ClassLoader) {
-        try {
-            val fCls = XposedHelpers.findClassIfExists("com.baidu.searchbox.video.detail.k.f", classLoader)
-            val dCls = XposedHelpers.findClassIfExists("com.baidu.searchbox.video.detail.core.b.d", classLoader)
-            if (fCls == null || dCls == null) {
-                log("removeVideoDetailRecommendAdItems cancel: $fCls, $dCls")
-                return
-            }
-            log("removeVideoDetailRecommendAdItems start")
-            XposedHelpers.findAndHookMethod(fCls, "c", String::class.java, dCls, object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val dObj = param.args[1] as Any
-                    doRemove(dObj)
-                }
-
-                private fun doRemove(dObj: Any) {
-                    try {
-                        val rUXJson = XposedHelpers.getObjectField(dObj, "rUX") as? JSONObject ?: return
-                        val relateJson = rUXJson.optJSONObject("relate") ?: return
-                        val dataJson = relateJson.optJSONObject("data") ?: return
-                        val adBanner = dataJson.remove("adBanner")
-                        log("removeVideoDetailRecommendAdItems doRemove adBanner success: ${adBanner != null}")
-                        val listJsonArray = dataJson.optJSONArray("list")
-                        if (listJsonArray != null) {
-                            //需要移除的 item index
-                            val removeIndexList = mutableListOf<Int>()
-                            val size = listJsonArray.length()
-                            for (index in 0 until size) {
-                                val item = listJsonArray.getJSONObject(index)
-                                if (isAdItem(item)) {
-                                    removeIndexList.add(index)
-                                }
-                            }
-                            for (index in removeIndexList) {
-                                listJsonArray.remove(index)
-                            }
-                            log("removeVideoDetailRecommendAdItems doRemove relate list success: ${removeIndexList.size}")
-                        }
-                    } catch (t: Throwable) {
-                        log("removeVideoDetailRecommendAdItems doRemove fail: ${t.getStackInfo()}")
-                    }
-                }
-
-                private fun isAdItem(item: JSONObject): Boolean {
-                    try {
-                        return item.optInt("vType") == 2
-                    } catch (t: Throwable) {
-                        log("removeVideoDetailRecommendAdItems isAdItem fail: ${t.getStackInfo()}")
-                    }
-                    return false
-                }
-            })
-        } catch (t: Throwable) {
-            log("removeVideoDetailRecommendAdItems fail: ${t.getStackInfo()}")
-        }
-    }
-
-    /**
-     * 移除评论列表广告
-     */
-    private fun removeDetailCommentListAdItems(classLoader: ClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.baidu.searchbox.model.e", classLoader,
-                "mo", String::class.java, String::class.java,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        param.result = doRemove(param.result)
-                    }
-
-                    private fun doRemove(result: Any?): Any? {
-                        if (result == null) {
-                            return null
-                        }
-                        try {
-                            val list = XposedHelpers.getObjectField(result, "meX") as? ArrayList<*>
-                            if (list.isNullOrEmpty()) {
-                                return result
-                            }
-                            log("removeDetailCommentAdItems success: ${list.size}")
-                            list.clear()
-                        } catch (t: Throwable) {
-                            log("removeDetailCommentAdItems doRemove fail: ${t.getStackInfo()}")
-                        }
-                        return result
-                    }
-                })
-        } catch (t: Throwable) {
-            log("removeDetailCommentAdItems fail: ${t.getStackInfo()}")
-        }
-    }
-
-    /**
-     * 移除推荐列表的广告
-     */
-    private fun removeFeedListAdItems(classLoader: ClassLoader) {
-        try {
-            log("removeFeedListAdItems start")
-            XposedHelpers.findAndHookMethod(
-                "com.baidu.searchbox.feed.q.e", classLoader,
-                "p", String::class.java, String::class.java, Boolean::class.java,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        param.result = doRemove(param.result)
-                    }
-
-                    private fun doRemove(result: Any?): Any? {
-                        if (result == null) {
-                            return null
-                        }
-                        try {
-                            val items = XposedHelpers.getObjectField(result, "gqt") as? ArrayList<*>
-                            if (items.isNullOrEmpty()) {
-                                return result
-                            }
-                            val iterator = items.iterator()
-                            var adItemCount = 0
-                            while (iterator.hasNext()) {
-                                val item = iterator.next()
-                                if (isAdItem(item)) {
-                                    adItemCount++
-                                    iterator.remove()
-                                }
-                            }
-                            if (adItemCount > 0) {
-                                log("removeFeedListAdItems removeAdItems success: $adItemCount")
-                            }
-                        } catch (t: Throwable) {
-                            log("removeFeedListAdItems removeAdItems fail: ${t.getStackInfo()}")
-                        }
-                        return result
-                    }
-
-                    private fun isAdItem(item: Any?): Boolean {
-                        if (item == null) return false
-                        try {
-                            val data = XposedHelpers.getObjectField(item, "gDm") ?: return false
-                            val mode = XposedHelpers.getObjectField(data, "mMode") as String
-                            //log("item: $item, isAdItem: ${mode == "ad"}")
-                            return mode == "ad"
-                        } catch (t: Throwable) {
-                            log("removeFeedListAdItems isAdItem fail: ${t.getStackInfo()}")
-                        }
-                        return false
-                    }
-                }
-            )
-        } catch (t: Throwable) {
-            log("removeFeedListAdItems fail: ${t.getStackInfo()}")
-        }
-    }
 }
