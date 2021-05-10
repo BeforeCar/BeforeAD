@@ -27,6 +27,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(WeiBoHookPolicy)
         appPolicies.add(MIUIMSAHookPolicy())
         appPolicies.add(BaiduHookPolicy())
+        appPolicies.add(TouTiaoHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

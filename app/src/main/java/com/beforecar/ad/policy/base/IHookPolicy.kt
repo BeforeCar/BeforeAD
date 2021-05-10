@@ -24,36 +24,56 @@ abstract class IHookPolicy {
 
     @CallSuper
     open fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        callMainApplicationCreate(lpparam)
         callApplicationCreate(lpparam)
     }
 
-    private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val packageName = lpparam.packageName
+    private fun callMainApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
+        if (lpparam.processName != getPackageName()) return
         try {
-            XposedHelpers.findAndHookMethod(
-                Application::class.java, "onCreate", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val application = param.thisObject as Application
-                        val classLoader = application.classLoader!!
-                        onApplicationCreate(application, classLoader)
-                        if (application.getProcessName() == packageName) {
-                            log("onMainApplicationCreate: $packageName")
-                            onMainApplicationCreate(application, classLoader)
-                        }
+            XposedHelpers.findAndHookMethod(Application::class.java, "onCreate", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val application = param.thisObject as Application
+                    val classLoader = application.classLoader!!
+                    if (application.getProcessName() == getPackageName()) {
+                        //log("onMainApplicationCreate: ${getPackageName()}")
+                        onMainApplicationCreate(application, classLoader)
                     }
                 }
-            )
+            })
         } catch (t: Throwable) {
-            log("callApplicationCreate fail: $packageName")
+            log("callMainApplicationCreate fail: ${getPackageName()}")
             log(t.getStackInfo())
         }
     }
 
-    open fun onApplicationCreate(application: Application, classLoader: ClassLoader) {
+    private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
+        try {
+            XposedHelpers.findAndHookMethod(Application::class.java, "onCreate", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val application = param.thisObject as Application
+                    val classLoader = application.classLoader!!
+                    //log("callApplicationCreate: ${getPackageName()}")
+                    onApplicationCreate(application, classLoader)
+                }
+            })
+        } catch (t: Throwable) {
+            log("callApplicationCreate fail: ${getPackageName()}")
+            log(t.getStackInfo())
+        }
+    }
+
+    /**
+     * 应用的主进程 Application 的 onCreate 调用
+     */
+    open fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
 
     }
 
-    open fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    /**
+     * 应用的每个进程 Application 的 onCreate 调用
+     */
+    open fun onApplicationCreate(application: Application, classLoader: ClassLoader) {
 
     }
 
