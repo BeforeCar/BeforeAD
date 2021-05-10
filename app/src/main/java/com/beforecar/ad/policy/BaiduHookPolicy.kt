@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.beforecar.ad.policy.base.IHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
+import com.beforecar.ad.utils.OkHttp
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONArray
@@ -41,7 +42,7 @@ class BaiduHookPolicy : IHookPolicy() {
             XposedHelpers.findAndHookMethod(interceptorCls, "intercept", chainCls, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val chain = param.args[0] as Any
-                    val url = getUrlFromChain(chain)
+                    val url = OkHttp.getUrlFromChain(chain)
                     val response = param.result ?: return
                     when {
                         //推荐列表
@@ -56,7 +57,7 @@ class BaiduHookPolicy : IHookPolicy() {
                         //详情页评论列表广告
                         url.contains("cmd=308") -> {
                             log("removeDetailCommentListAdItems api start")
-                            val emptyResponse = buildEmptyResponse(response)
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
                                 log("removeDetailCommentListAdItems api success")
@@ -65,7 +66,7 @@ class BaiduHookPolicy : IHookPolicy() {
                         //图文新闻详情页推荐广告
                         url.contains("newspage/api/getmobads") -> {
                             log("removeDetailRecommendAdItems api start")
-                            val emptyResponse = buildEmptyResponse(response)
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
                                 log("removeDetailRecommendAdItems api success")
@@ -74,7 +75,7 @@ class BaiduHookPolicy : IHookPolicy() {
                         //视频新闻详情页广告
                         url.contains("cmd=207") -> {
                             log("removeVideoDetailAdItems api start")
-                            val emptyResponse = buildEmptyResponse(response)
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
                                 log("removeVideoDetailAdItems api success")
@@ -92,7 +93,7 @@ class BaiduHookPolicy : IHookPolicy() {
                         //splash ad
                         url.contains("action=update") -> {
                             log("removeSplashAd api start")
-                            val emptyResponse = buildEmptyResponse(response)
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
                                 log("removeSplashAd api success")
@@ -101,24 +102,13 @@ class BaiduHookPolicy : IHookPolicy() {
                         //检测更新
                         url.contains("cmd=301") -> {
                             log("removeAppUpgrade api start")
-                            val emptyResponse = buildEmptyResponse(response)
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
                                 log("removeAppUpgrade api success")
                             }
                         }
                     }
-                }
-
-                private fun getUrlFromChain(chain: Any): String {
-                    try {
-                        val request = XposedHelpers.callMethod(chain, "request") as Any
-                        val httpUrl = XposedHelpers.callMethod(request, "url") as Any
-                        return XposedHelpers.callMethod(httpUrl, "toString") as String
-                    } catch (t: Throwable) {
-                        log("getUrlFromChain fail: ${t.getStackInfo()}")
-                    }
-                    return ""
                 }
             })
         } catch (t: Throwable) {
@@ -131,9 +121,9 @@ class BaiduHookPolicy : IHookPolicy() {
      */
     private fun removeFeedListAdItems(response: Any): Any? {
         try {
-            val string = getResponseString(response)
+            val string = OkHttp.getResponseString(response)
             val newString = removeFeedListAdString(string)
-            return createNewResponse(response, newString)
+            return OkHttp.createNewResponse(response, newString)
         } catch (t: Throwable) {
             log("removeFeedListAdItems fail: ${t.getStackInfo()}")
         }
@@ -170,9 +160,9 @@ class BaiduHookPolicy : IHookPolicy() {
      */
     private fun removeVideoDetailRecommendAdItems(response: Any): Any? {
         try {
-            val string = getResponseString(response)
+            val string = OkHttp.getResponseString(response)
             val newString = removeVideoDetailRecommendAdString(string)
-            return createNewResponse(response, newString)
+            return OkHttp.createNewResponse(response, newString)
         } catch (t: Throwable) {
             log("removeFeedListAdItems fail: ${t.getStackInfo()}")
         }
@@ -208,47 +198,6 @@ class BaiduHookPolicy : IHookPolicy() {
             log("removeVideoDetailRecommendAdString fail: ${t.getStackInfo()}")
         }
         return string
-    }
-
-    @Throws(Throwable::class)
-    private fun getResponseString(response: Any): String {
-        val body = XposedHelpers.callMethod(response, "body") ?: return ""
-        return XposedHelpers.callMethod(body, "string") as? String ?: ""
-    }
-
-    @Throws(Throwable::class)
-    private fun createNewResponse(response: Any, string: String): Any? {
-        val classLoader = response.javaClass.classLoader
-        val responseCls = XposedHelpers.findClass("okhttp3.Response", classLoader)
-        val builderCls = XposedHelpers.findClass("okhttp3.Response\$Builder", classLoader)
-        val bodyCls = XposedHelpers.findClass("okhttp3.ResponseBody", classLoader)
-        val body = XposedHelpers.callMethod(response, "body") ?: return null
-        val mediaType = XposedHelpers.callMethod(body, "contentType")
-        val newBuilder = builderCls.getConstructor(responseCls).newInstance(response)
-        val newBody = XposedHelpers.callStaticMethod(bodyCls, "create", mediaType, string)
-        XposedHelpers.callMethod(newBuilder, "body", newBody)
-        return XposedHelpers.callMethod(newBuilder, "build")
-    }
-
-    /**
-     * 创建一个空的 response 基于给定的 response
-     */
-    private fun buildEmptyResponse(response: Any): Any? {
-        try {
-            val classLoader = response.javaClass.classLoader
-            val responseCls = XposedHelpers.findClass("okhttp3.Response", classLoader)
-            val builderCls = XposedHelpers.findClass("okhttp3.Response\$Builder", classLoader)
-            val bodyCls = XposedHelpers.findClass("okhttp3.ResponseBody", classLoader)
-            val body = XposedHelpers.callMethod(response, "body") ?: return null
-            val mediaType = XposedHelpers.callMethod(body, "contentType")
-            val emptyBody = XposedHelpers.callStaticMethod(bodyCls, "create", mediaType, "")
-            val newBuilder = builderCls.getConstructor(responseCls).newInstance(response)
-            XposedHelpers.callMethod(newBuilder, "body", emptyBody)
-            return XposedHelpers.callMethod(newBuilder, "build")
-        } catch (t: Throwable) {
-            log("buildEmptyResponseBody fail: ${t.getStackInfo()}")
-        }
-        return null
     }
 
     /**
