@@ -6,9 +6,12 @@ import android.app.Application
 import android.content.Intent
 import com.beforecar.ad.policy.base.IHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
+import com.beforecar.ad.utils.JsonUtils
+import com.beforecar.ad.utils.OkHttp
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
-import java.lang.reflect.Method
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * @author: wangpan
@@ -25,12 +28,96 @@ object WeiBoHookPolicy : IHookPolicy() {
     }
 
     override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+        //hook okhttp BridgeInterceptor
+        hookBridgeInterceptor(classLoader)
         //移除开屏广告
         removeSplashAd(classLoader)
-        //移除列表页广告
-        removeListAdItems(classLoader)
-        //移除视频列表页广告
-        removeVideoListAdItems(classLoader)
+    }
+
+    /**
+     * hook okhttp BridgeInterceptor
+     */
+    private fun hookBridgeInterceptor(classLoader: ClassLoader) {
+        try {
+            log("hookBridgeInterceptor start")
+            val interceptorCls = XposedHelpers.findClass("okhttp3.internal.http.BridgeInterceptor", classLoader)
+            val chainCls = XposedHelpers.findClass("okhttp3.Interceptor\$Chain", classLoader)
+            XposedHelpers.findAndHookMethod(interceptorCls, "intercept", chainCls, object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val chain = param.args[0] as Any
+                    val url = OkHttp.getUrlFromChain(chain)
+                    val response = param.result ?: return
+                    when {
+                        //关注列表, 推荐列表
+                        url.contains("statuses/unread_friends_timeline")
+                                || url.contains("statuses/unread_hot_timeline") -> {
+                            log("removeListAdItems api start")
+                            val newResponse = removeListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeListAdItems api success")
+                            }
+                        }
+                        //热点
+                        url.contains("/cardlist?") -> {
+                            log("removeCardListAdItems api start")
+                            val newResponse = removeCardListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeCardListAdItems api success")
+                            }
+                        }
+                        //视频详情页
+                        url.contains("statuses/video_mixtimeline") -> {
+                            log("removeVideoDetailAds api start")
+                            val newResponse = removeVideoDetailAds(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeVideoDetailAds api success")
+                            }
+                        }
+                        //微博详情页
+                        url.contains("statuses/extend") -> {
+                            log("removeDetailWeiboAds api start")
+                            val newResponse = removeDetailWeiboAds(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeDetailWeiboAds api success")
+                            }
+                        }
+                        //视频列表页
+                        url.contains("video/tiny_stream_video_list") -> {
+                            log("removeVideoListAdItems api start")
+                            val newResponse = removeVideoListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeVideoListAdItems api success")
+                            }
+                        }
+                        //检测更新
+                        url.contains("client/version") -> {
+                            log("checkUpgrade api start")
+                            val newResponse = disableCheckUpgrade(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("checkUpgrade api success")
+                            }
+                        }
+                        //我 tab 页
+                        url.contains("/page?") -> {
+                            log("removeMinePageAds api start")
+                            val newResponse = removeMinePageAds(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeMinePageAds api success")
+                            }
+                        }
+                    }
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookBridgeInterceptor fail: ${t.getStackInfo()}")
+        }
     }
 
     /**
@@ -95,132 +182,237 @@ object WeiBoHookPolicy : IHookPolicy() {
     }
 
     /**
-     * 移除列表广告
+     * 移除列表(关注,推荐)广告
      */
-    private fun removeListAdItems(classLoader: ClassLoader) {
+    private fun removeListAdItems(response: Any): Any? {
         try {
-            log("removeListAdItems start")
-            XposedHelpers.findAndHookMethod(
-                "com.sina.weibo.streamservice.adapter.RecyclerViewAdapter", classLoader,
-                "setData", List::class.java, Boolean::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val dataList = param.args[0] as? List<Any?> ?: emptyList()
-                        if (dataList.isEmpty()) return
-                        val newDataList = dataList.toMutableList()
-                        val iterator = newDataList.iterator()
-                        var hasAdItems = false
-                        while (iterator.hasNext()) {
-                            val item = iterator.next()
-                            //移除广告item
-                            if (item == null || isAdItem(item)) {
-                                iterator.remove()
-                                hasAdItems = true
-                            }
-                        }
-                        param.args[0] = newDataList
-                        if (hasAdItems) {
-                            log("removeListAdItems success")
-                        }
-                    }
-
-                    /**
-                     * 判断微博列表的item是否是广告item
-                     */
-                    private fun isAdItem(item: Any): Boolean {
-                        try {
-                            val data = XposedHelpers.callMethod(item, "getData") ?: return false
-                            val field = XposedHelpers.findFieldIfExists(data.javaClass, "mblogtype")
-                            return field != null && field.get(data) == 1
-                        } catch (t: Throwable) {
-                            log("isAdItem fail: ${t.getStackInfo()}")
-                        }
-                        return false
-                    }
-                }
-            )
+            val string = OkHttp.getResponseString(response)
+            val newString = removeListAdString(string)
+            return OkHttp.createNewResponse(response, newString)
         } catch (t: Throwable) {
             log("removeListAdItems fail: ${t.getStackInfo()}")
         }
+        return null
+    }
+
+    private fun removeListAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            //不知道是什么字段,反正设置为空准没错
+            result.put("ad", "")
+            val statuses = result.optJSONArray("statuses") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(statuses) { item ->
+                val isAdItem = item.optInt("mblogtype") == 1
+                if (isAdItem) {
+                    adItemCount++
+                }
+                isAdItem
+            }
+            log("removeListAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 移除热点列表广告
+     */
+    private fun removeCardListAdItems(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeCardListAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeCardListAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeCardListAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val cards = result.optJSONArray("cards") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(cards) block@{ item ->
+                val mblog = item.optJSONObject("mblog") ?: return@block false
+                val isAdItem = mblog.optInt("mblogtype") == 1
+                if (isAdItem) {
+                    adItemCount++
+                }
+                isAdItem
+            }
+            log("removeCardListAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeCardListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 视频详情页
+     */
+    private fun removeVideoDetailAds(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeVideoDetailAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeVideoDetailAds fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeVideoDetailAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            result.put("expandable_views", "")
+            log("removeVideoDetailAdString success")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeVideoDetailAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 微博详情页
+     */
+    private fun removeDetailWeiboAds(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeDetailWeiboAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeDetailWeiboAds fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeDetailWeiboAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            result.put("trend", "")
+            log("removeDetailWeiboAdString success")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeDetailWeiboAdString fail: ${t.getStackInfo()}")
+        }
+        return string
     }
 
     /**
      * 移除视频列表页广告
      */
-    private fun removeVideoListAdItems(classLoader: ClassLoader) {
+    private fun removeVideoListAdItems(response: Any): Any? {
         try {
-            log("removeVideoListAdItems start")
-            XposedHelpers.findAndHookMethod(
-                "com.sina.weibo.story.stream.verticalnew.pagegroup.adapter.SVSAdapter",
-                classLoader,
-                "setData", List::class.java,
-                RemoveVideoAdMethodHook("setData", classLoader)
-            )
-            XposedHelpers.findAndHookMethod(
-                "com.sina.weibo.story.stream.verticalnew.pagegroup.adapter.SVSAdapter",
-                classLoader,
-                "appendData", List::class.java,
-                RemoveVideoAdMethodHook("appendData", classLoader)
-            )
-            XposedHelpers.findAndHookMethod(
-                "com.sina.weibo.story.stream.verticalnew.pagegroup.adapter.SVSAdapter",
-                classLoader,
-                "preAppendData", List::class.java,
-                RemoveVideoAdMethodHook("preAppendData", classLoader)
-            )
+            val string = OkHttp.getResponseString(response)
+            val newString = removeVideoListAdString(string)
+            return OkHttp.createNewResponse(response, newString)
         } catch (t: Throwable) {
             log("removeVideoListAdItems fail: ${t.getStackInfo()}")
         }
+        return null
     }
 
-    private class RemoveVideoAdMethodHook(
-        private val method: String,
-        classLoader: ClassLoader
-    ) : XC_MethodHook() {
-
-        private val managerInstance: Any
-        private val getStatusMethod: Method
-
-        init {
-            val managerClass = XposedHelpers.findClass(
-                "com.sina.weibo.story.stream.vertical.core.SVSDataManager", classLoader
-            )
-            managerInstance = managerClass.getDeclaredMethod("getInstance").invoke(null)!!
-            getStatusMethod = managerClass.getDeclaredMethod("getStatus", String::class.java)
-        }
-
-        override fun beforeHookedMethod(param: MethodHookParam) {
-            val dataList = param.args[0] as? List<Any?> ?: emptyList()
-            if (dataList.isEmpty()) return
-            val newDataList = dataList.toMutableList()
-            val iterator = newDataList.iterator()
-            var hasAdItems = false
-            while (iterator.hasNext()) {
-                val blogId = iterator.next() as? String ?: ""
-                if (isVideoAdItem(blogId)) {
-                    iterator.remove()
-                    hasAdItems = true
+    private fun removeVideoListAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val statuses = result.optJSONArray("statuses") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(statuses) block@{ item ->
+                val videoInfo = item.optJSONObject("video_info") ?: return@block false
+                val isAdItem = videoInfo.optJSONObject("ad_info") != null
+                if (isAdItem) {
+                    adItemCount++
                 }
+                isAdItem
             }
-            param.args[0] = newDataList
-            if (hasAdItems) {
-                log("removeVideoListAdItems $method success")
-            }
+            log("removeVideoListAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeVideoListAdString fail: ${t.getStackInfo()}")
         }
+        return string
+    }
 
-        /**
-         * 判断是否是视频广告item
-         */
-        private fun isVideoAdItem(blogId: String): Boolean {
-            try {
-                val status = getStatusMethod.invoke(managerInstance, blogId) ?: return false
-                val videoInfo = XposedHelpers.getObjectField(status, "video_info") ?: return false
-                return XposedHelpers.getObjectField(videoInfo, "ad_info") != null
-            } catch (t: Throwable) {
-                log("isVideoAdItem fail: ${t.getStackInfo()}")
+    /**
+     * 检查更新
+     */
+    private fun disableCheckUpgrade(response: Any): Any? {
+        try {
+            val result = JSONObject().apply {
+                put("version", "")
+                put("download", "")
+                put("wapurl", "")
+                put("md5", "")
+                put("desc", "")
+                put("changelog", "")
+                put("prompt", "")
+                put("addtime", "")
+                put("poptime", -1)
             }
-            return false
+            return OkHttp.createNewResponse(response, result.toString())
+        } catch (t: Throwable) {
+            log("disableCheckUpgrade fail: ${t.getStackInfo()}")
         }
+        return null
+    }
+
+    /**
+     * 移除我的 tab 页广告
+     */
+    private fun removeMinePageAds(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeMinePageAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeMinePageAds fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeMinePageAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            //去除我也不知道是什么的banner
+            result.put("banners", "")
+            val cards = result.optJSONArray("cards") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(cards) block@{ item ->
+                val cardid = item.optString("cardid")
+                //微公益
+                if (cardid == "100505_-_publicwelfare") {
+                    adItemCount++
+                    return@block true
+                }
+                //追热点领红包
+                if (cardid == "100505_-_sinanews2021") {
+                    adItemCount++
+                    return@block true
+                }
+                //更多功能卡片
+                if (cardid == "100505_-_managecard") {
+                    adItemCount++
+                    return@block true
+                }
+                //免流量
+                if (cardid == "100505_-_draft") {
+                    adItemCount++
+                    return@block true
+                }
+                return@block false
+            }
+            log("removeMinePageAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeMinePageAdString fail: ${t.getStackInfo()}")
+        }
+        return string
     }
 
 }
