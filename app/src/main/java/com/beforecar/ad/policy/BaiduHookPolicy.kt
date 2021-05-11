@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
+import com.beforecar.ad.policy.base.getVersionName
 import com.beforecar.ad.utils.OkHttp
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -24,7 +25,10 @@ class BaiduHookPolicy : AbsHookPolicy() {
         return "com.baidu.searchbox"
     }
 
+    private var versionName: String = ""
+
     override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+        this.versionName = application.getVersionName()
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
         //闪屏页广告
@@ -211,7 +215,11 @@ class BaiduHookPolicy : AbsHookPolicy() {
                 return
             }
             log("removeSplashAd start")
-            XposedHelpers.findAndHookMethod(nCls, "na", Context::class.java, object : XC_MethodHook() {
+            val methodName = when (versionName) {
+                "12.14.5.10" -> "na"
+                else -> "ng"
+            }
+            XposedHelpers.findAndHookMethod(nCls, methodName, Context::class.java, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     param.result = null
                     log("removeSplashAd success")
