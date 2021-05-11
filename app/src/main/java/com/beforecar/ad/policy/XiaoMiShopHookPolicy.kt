@@ -4,7 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.pm.ShortcutManager
 import android.os.Build
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
@@ -16,9 +16,9 @@ import de.robv.android.xposed.XposedHelpers
  * @date: 2021/5/6
  * 小米商城
  */
-class XiaoMiShopHookPolicy : IHookPolicy() {
+class XiaoMiShopHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_xiaomi_shop"
+    override val tag: String = "tag_xiaomi_shop"
 
     override fun getPackageName(): String {
         return "com.xiaomi.shop"

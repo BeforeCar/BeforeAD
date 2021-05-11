@@ -1,7 +1,7 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -12,9 +12,9 @@ import de.robv.android.xposed.XposedHelpers
  * @date: 2021/5/6
  * 12306
  */
-class MobileTicketHookPolicy : IHookPolicy() {
+class MobileTicketHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_12306"
+    override val tag: String = "tag_12306"
 
     override fun getPackageName(): String {
         return "com.MobileTicket"

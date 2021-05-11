@@ -2,7 +2,7 @@ package com.beforecar.ad.policy
 
 import android.app.Activity
 import android.app.Application
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
@@ -13,9 +13,9 @@ import de.robv.android.xposed.XposedHelpers
  * @date: 2021/5/6
  * 小米应用商店
  */
-class XiaoMiMarketHookPolicy : IHookPolicy() {
+class XiaoMiMarketHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_xiaomi_market"
+    override val tag: String = "tag_xiaomi_market"
 
     override fun getPackageName(): String {
         return "com.xiaomi.market"

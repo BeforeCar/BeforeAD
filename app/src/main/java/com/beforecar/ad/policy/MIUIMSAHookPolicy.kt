@@ -1,7 +1,7 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -12,9 +12,9 @@ import de.robv.android.xposed.XposedHelpers
  * @date: 2021/5/6
  * 小米智能服务
  */
-class MIUIMSAHookPolicy : IHookPolicy() {
+class MIUIMSAHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_msa"
+    override val tag: String = "tag_msa"
 
     override fun getPackageName(): String {
         return "com.miui.systemAdSolution"
