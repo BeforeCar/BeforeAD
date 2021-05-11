@@ -1,7 +1,7 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getProcessName
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
@@ -14,9 +14,9 @@ import org.json.JSONObject
  * @email: p.wang@aftership.com
  * @date: 2021/5/8
  */
-class TouTiaoHookPolicy : IHookPolicy() {
+class TouTiaoHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_toutiao"
+    override val tag: String = "tag_toutiao"
 
     override fun getPackageName(): String {
         return "com.ss.android.article.news"

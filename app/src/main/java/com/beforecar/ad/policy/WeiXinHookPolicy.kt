@@ -3,7 +3,7 @@ package com.beforecar.ad.policy
 import android.app.Application
 import android.view.View
 import android.view.ViewGroup
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.policy.base.getVersionName
 import de.robv.android.xposed.XC_MethodHook
@@ -15,9 +15,9 @@ import de.robv.android.xposed.XposedHelpers
  * @date: 2021/5/6
  * 微信
  */
-class WeiXinHookPolicy : IHookPolicy() {
+class WeiXinHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_weixin"
+    override val tag: String = "tag_weixin"
 
     override fun getPackageName(): String {
         return "com.tencent.mm"

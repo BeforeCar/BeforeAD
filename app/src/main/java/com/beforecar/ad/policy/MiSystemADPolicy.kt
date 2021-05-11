@@ -1,6 +1,6 @@
 package com.beforecar.ad.policy
 
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
@@ -11,7 +11,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  * Date:
  *
  */
-class MiSystemADPolicy : IHookPolicy() {
+class MiSystemADPolicy : AbsHookPolicy() {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         super.handleLoadPackage(lpparam)

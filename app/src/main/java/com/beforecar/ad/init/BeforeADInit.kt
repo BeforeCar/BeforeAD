@@ -1,7 +1,7 @@
 package com.beforecar.ad.init
 
 import com.beforecar.ad.policy.*
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
@@ -15,7 +15,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  */
 class BeforeADInit : IXposedHookLoadPackage {
 
-    private val appPolicies = mutableListOf<IHookPolicy>()
+    private val appPolicies = mutableListOf<AbsHookPolicy>()
 
     init {
         appPolicies.add(MiguMusicADPolicy())

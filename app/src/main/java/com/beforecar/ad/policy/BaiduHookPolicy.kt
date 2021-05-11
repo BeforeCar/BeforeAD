@@ -2,7 +2,7 @@ package com.beforecar.ad.policy
 
 import android.app.Application
 import android.content.Context
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.utils.OkHttp
 import de.robv.android.xposed.XC_MethodHook
@@ -16,9 +16,9 @@ import org.json.JSONObject
  * @date: 2021/5/6
  * 百度
  */
-class BaiduHookPolicy : IHookPolicy() {
+class BaiduHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_baidu"
+    override val tag: String = "tag_baidu"
 
     override fun getPackageName(): String {
         return "com.baidu.searchbox"

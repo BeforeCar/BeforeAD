@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
-import com.beforecar.ad.policy.base.IHookPolicy
+import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.utils.JsonUtils
 import com.beforecar.ad.utils.OkHttp
@@ -19,9 +19,9 @@ import org.json.JSONObject
  * @date: 2021/5/6
  * 微博
  */
-object WeiBoHookPolicy : IHookPolicy() {
+object WeiBoHookPolicy : AbsHookPolicy() {
 
-    override val TAG: String = "tag_weibo"
+    override val tag: String = "tag_weibo"
 
     override fun getPackageName(): String {
         return "com.sina.weibo"
