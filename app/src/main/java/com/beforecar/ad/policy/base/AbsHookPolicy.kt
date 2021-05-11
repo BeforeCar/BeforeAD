@@ -2,7 +2,6 @@ package com.beforecar.ad.policy.base
 
 import android.app.Activity
 import android.app.Application
-import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +20,11 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 abstract class AbsHookPolicy {
 
     open val tag: String = "tag_hook"
+
+    /**
+     * application 可能是任何一个进程的，目前只是给 Toast 使用，慎用
+     */
+    private var anyThreadApplication: Application? = null
 
     /**
      *
@@ -72,6 +76,7 @@ abstract class AbsHookPolicy {
                         val classLoader = application.classLoader!!
                         //log("callApplicationCreate: ${getPackageName()}")
                         onApplicationCreate(application, classLoader)
+                        anyThreadApplication = application
                     }
                 })
         } catch (t: Throwable) {
@@ -220,9 +225,11 @@ abstract class AbsHookPolicy {
         Handler(Looper.getMainLooper()).postDelayed(runnable, delayMillis)
     }
 
-    fun showToast(context: Context, msg: String, duration: Int = Toast.LENGTH_SHORT) {
-        runOnUIThread {
-            Toast.makeText(context, msg, duration).show()
+    fun showToast(msg: String, duration: Int = Toast.LENGTH_SHORT) {
+        anyThreadApplication?.run {
+            runOnUIThread {
+                Toast.makeText(anyThreadApplication, msg, duration).show()
+            }
         }
     }
 
