@@ -21,5 +21,6 @@
         <item>com.miui.systemAdSolution</item>
         <item>com.baidu.searchbox</item>
         <item>com.ss.android.article.news</item>
+        <item>com.jingdong.app.mall</item>
     </string-array>
 </resources>

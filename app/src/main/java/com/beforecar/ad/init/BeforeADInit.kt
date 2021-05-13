@@ -28,6 +28,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(MIUIMSAHookPolicy())
         appPolicies.add(BaiduHookPolicy())
         appPolicies.add(TouTiaoHookPolicy())
+        appPolicies.add(JDHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

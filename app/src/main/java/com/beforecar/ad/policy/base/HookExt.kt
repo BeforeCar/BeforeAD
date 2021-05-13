@@ -1,5 +1,6 @@
 package com.beforecar.ad.policy.base
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageInfo
@@ -69,6 +70,13 @@ fun Field.getValueSafety(obj: Any): Any? {
     } catch (t: Throwable) {
         null
     }
+}
+
+/**
+ * 判断 activity 的状态是否安全
+ */
+fun Activity.isSafety(): Boolean {
+    return !isDestroyed && !isFinishing
 }
 
 inline fun <R> notNull(vararg args: Any?, block: () -> R) =
