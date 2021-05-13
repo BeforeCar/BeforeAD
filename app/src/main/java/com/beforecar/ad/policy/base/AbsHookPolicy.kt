@@ -201,7 +201,7 @@ abstract class AbsHookPolicy {
 
     }
 
-    fun log(content: Any?) {
+    open fun log(content: Any?) {
         XposedBridge.log("$tag: $content")
     }
 
