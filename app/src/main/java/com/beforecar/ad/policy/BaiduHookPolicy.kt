@@ -121,6 +121,15 @@ class BaiduHookPolicy : AbsHookPolicy() {
                                 log("removeAppUpgrade api success")
                             }
                         }
+                        //新闻详情页推荐广告
+                        url.contains("cmd=104") -> {
+                            log("removeDetailRelateAdItems api start")
+                            val newResponse = removeDetailRelateAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeDetailRelateAdItems api success")
+                            }
+                        }
                     }
                 }
             })
@@ -243,6 +252,37 @@ class BaiduHookPolicy : AbsHookPolicy() {
         } catch (t: Throwable) {
             log("removeSplashAd fail: ${t.getStackInfo()}")
         }
+    }
+
+    /**
+     * 新闻详情页推荐广告
+     */
+    private fun removeDetailRelateAdItems(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeDetailRelateAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeDetailRelateAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeDetailRelateAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data") ?: return string
+            val pageInfo = data.optJSONObject("pageInfo") ?: return string
+            val smallAppNew = pageInfo.optJSONObject("smallAppNew")
+            if (smallAppNew != null) {
+                pageInfo.put("smallAppNew", "")
+                log("removeDetailRelateAdString success")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeDetailRelateAdString fail: ${t.getStackInfo()}")
+        }
+        return string
     }
 
 }
