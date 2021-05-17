@@ -58,6 +58,15 @@ class BaiduHookPolicy : AbsHookPolicy() {
                                 log("removeFeedListAdItems api success")
                             }
                         }
+                        //推荐列表2
+                        url.contains("cmd=311") -> {
+                            log("removeFeedListAdItems2 api start")
+                            val emptyResponse = OkHttp.createEmptyResponse(response)
+                            if (emptyResponse != null) {
+                                param.result = emptyResponse
+                                log("removeFeedListAdItems2 api success")
+                            }
+                        }
                         //详情页评论列表广告
                         url.contains("cmd=308") -> {
                             log("removeDetailCommentListAdItems api start")
@@ -146,7 +155,13 @@ class BaiduHookPolicy : AbsHookPolicy() {
                 val item = items.getJSONObject(index)
                 val itemData = item.optJSONObject("data") ?: continue
                 val mode = itemData.optString("mode")
-                if (mode == "ad") {
+                val resourceType = itemData.optString("resource_type")
+                /**
+                 * mode == "ad" 广告
+                 * mode == "smartapp" 智能小程序
+                 * resourceType == "answer" 百度问答
+                 */
+                if (mode == "ad" || mode == "smartapp" || resourceType == "answer") {
                     item.put("data", "")
                     adItemCount++
                 }
