@@ -2,6 +2,9 @@ package com.beforecar.ad.policy.base
 
 import android.app.Activity
 import android.app.Application
+import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +14,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import org.json.JSONObject
 
 /**
  * Author: minminaya  承接东风各式弹头打磨、抛光、刷漆等4S保养工程。
@@ -20,6 +24,11 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 abstract class AbsHookPolicy {
 
     open val tag: String = "tag_hook"
+
+    /**
+     * 应用的主进程 application 实例
+     */
+    private var mainApplication: Application? = null
 
     /**
      * application 可能是任何一个进程的，目前只是给 Toast 使用，慎用
@@ -47,18 +56,18 @@ abstract class AbsHookPolicy {
         if (lpparam.processName != getPackageName()) return
         try {
             XposedHelpers.findAndHookMethod(
-                Application::class.java,
-                "onCreate",
-                object : XC_MethodHook() {
+                Application::class.java, "onCreate", object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val application = param.thisObject as Application
                         val classLoader = application.classLoader!!
                         if (application.getProcessName() == getPackageName()) {
+                            mainApplication = application
                             //log("onMainApplicationCreate: ${getPackageName()}")
                             onMainApplicationCreate(application, classLoader)
                         }
                     }
-                })
+                }
+            )
         } catch (t: Throwable) {
             log("callMainApplicationCreate fail: ${getPackageName()}")
             log(t.getStackInfo())
@@ -201,8 +210,26 @@ abstract class AbsHookPolicy {
 
     }
 
+    /**
+     * 是否使用广播发送 log
+     */
+    open fun isSendBroadcastLog(): Boolean {
+        return false
+    }
+
     open fun log(content: Any?) {
-        XposedBridge.log("$tag: $content")
+        if (isSendBroadcastLog()) {
+            val intent = Intent("action_app_log_broadcast").apply {
+                component = ComponentName("com.beforecar.ad", "com.beforecar.ad.AppLogReceiver")
+                val jsonLog = JSONObject()
+                jsonLog.put("tag", tag)
+                jsonLog.put("content", content.toString())
+                data = Uri.parse(jsonLog.toString())
+            }
+            mainApplication?.sendBroadcast(intent)
+        } else {
+            XposedBridge.log("$tag: $content")
+        }
     }
 
     /**

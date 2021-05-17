@@ -35,6 +35,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 接收京东 app log 的广播接收者 -->
+        <receiver
+            android:name=".AppLogReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="action_app_log_broadcast" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

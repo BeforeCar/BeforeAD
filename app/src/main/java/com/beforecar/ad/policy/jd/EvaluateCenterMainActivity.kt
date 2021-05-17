@@ -1,6 +1,5 @@
 package com.beforecar.ad.policy.jd
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Handler
 import android.os.Looper
@@ -20,8 +19,7 @@ import de.robv.android.xposed.XposedHelpers
  * @email: p.wang@aftership.com
  * @date: 2021/5/14
  */
-@SuppressLint("StaticFieldLeak")
-class EvaluateCenterMainActivity(private val jdHookPolicy: JDHookPolicy) {
+class EvaluateCenterMainActivity {
 
     /**
      * EvaluateCenterMainActivity 实例
@@ -36,7 +34,7 @@ class EvaluateCenterMainActivity(private val jdHookPolicy: JDHookPolicy) {
     /**
      * 发布评论帮助类
      */
-    private val jdPushCommentHelper = JDPushCommentHelper(jdHookPolicy, this)
+    private val jdPushCommentHelper = JDPushCommentHelper(this)
 
     /**
      * loading dialog
@@ -48,8 +46,12 @@ class EvaluateCenterMainActivity(private val jdHookPolicy: JDHookPolicy) {
      */
     private val buttonView = "button_tag"
 
+    private fun log(content: Any?) {
+        JDHookPolicy.log(content)
+    }
+
     fun onCreate(activity: Activity) {
-        jdHookPolicy.log("EvaluateCenterMainActivity onCreate")
+        log("EvaluateCenterMainActivity onCreate")
         currentActivity = activity
         handler = Handler(Looper.getMainLooper())
         val button = addCommentButton(activity)
@@ -59,7 +61,7 @@ class EvaluateCenterMainActivity(private val jdHookPolicy: JDHookPolicy) {
     }
 
     fun onDestroy() {
-        jdHookPolicy.log("EvaluateCenterMainActivity onDestroy")
+        log("EvaluateCenterMainActivity onDestroy")
         stopPushComment()
         handler?.removeCallbacksAndMessages(null)
         handler = null
@@ -190,9 +192,9 @@ class EvaluateCenterMainActivity(private val jdHookPolicy: JDHookPolicy) {
         try {
             val presenter = XposedHelpers.callMethod(activity, "getPresenter") as Any
             XposedHelpers.callMethod(presenter, "a", 0, false, false)
-            jdHookPolicy.log("refreshCommentList success")
+            log("refreshCommentList success")
         } catch (t: Throwable) {
-            jdHookPolicy.log("refreshCommentList fail: ${t.getStackInfo()}")
+            log("refreshCommentList fail: ${t.getStackInfo()}")
         }
     }
 

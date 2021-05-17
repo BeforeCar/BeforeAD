@@ -1,6 +1,5 @@
 package com.beforecar.ad.policy
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
@@ -11,58 +10,33 @@ import com.beforecar.ad.policy.jd.EvaluateCenterMainActivity
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * @author: wangpan
  * @email: p.wang@aftership.com
  * @date: 2021/5/11
+ *
  * 京东
  */
-class JDHookPolicy : AbsHookPolicy() {
+object JDHookPolicy : AbsHookPolicy() {
 
-    private var logFile: File? = null
+    override val tag: String = "tag_jd"
 
-    private val evaluateCenterMainActivity = EvaluateCenterMainActivity(this)
-
-    private val timeFormat: SimpleDateFormat by lazy {
-        SimpleDateFormat("MM-dd HH:mm:ss:SSS", Locale.getDefault())
+    private val evaluateCenterMainActivity: EvaluateCenterMainActivity by lazy {
+        EvaluateCenterMainActivity()
     }
 
     override fun getPackageName(): String {
         return "com.jingdong.app.mall"
     }
 
-    @SuppressLint("SdCardPath")
-    private fun createLogFile(force: Boolean): File? {
-        try {
-            val logFile = File("/data/data/${getPackageName()}/files/", "log_file.txt")
-            if (!logFile.exists()) {
-                logFile.createNewFile()
-                return logFile
-            }
-            if (force) {
-                logFile.delete()
-                logFile.createNewFile()
-            }
-            return logFile
-        } catch (t: Throwable) {
-            //no op
-        }
-        return null
-    }
-
-    override fun log(content: Any?) {
-        logFile?.appendText("${timeFormat.format(System.currentTimeMillis())}: $content\n")
+    override fun isSendBroadcastLog(): Boolean {
+        return true
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         super.handleLoadPackage(lpparam)
         if (lpparam.processName == lpparam.packageName) {
-            //创建日志输出文件
-            logFile = createLogFile(true)
             callOnMainAppStart(lpparam)
         }
     }
