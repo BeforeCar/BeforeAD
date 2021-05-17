@@ -20,10 +20,7 @@ import java.util.*
  *
  * 京东自动发布评论
  */
-class JDPushCommentHelper(
-    private val jdHookPolicy: JDHookPolicy,
-    private val evaluateActivity: EvaluateCenterMainActivity
-) {
+class JDPushCommentHelper(private val evaluateActivity: EvaluateCenterMainActivity) {
 
     private val random: Random by lazy { Random() }
 
@@ -43,7 +40,7 @@ class JDPushCommentHelper(
     private var pushCommentCallback: IPushCommentCallback? = null
 
     private fun log(content: Any?) {
-        jdHookPolicy.log(content)
+        JDHookPolicy.log(content)
     }
 
     interface IPushCommentCallback {
