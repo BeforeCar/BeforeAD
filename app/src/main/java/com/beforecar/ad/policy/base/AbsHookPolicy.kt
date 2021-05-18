@@ -36,10 +36,18 @@ abstract class AbsHookPolicy {
     private var anyThreadApplication: Application? = null
 
     /**
-     *
-     * @return String hook 应用的包名
+     * hook 应用的包名
+     * @return String
      */
     abstract fun getPackageName(): String
+
+    /**
+     * 应用的主 application 全类名
+     * @return String
+     */
+    open fun getMainApplicationName(): String {
+        return "android.app.Application"
+    }
 
     private var unHookByActivityForMainThread: XC_MethodHook.Unhook? = null
     private var unHookByActivity: XC_MethodHook.Unhook? = null
@@ -55,22 +63,20 @@ abstract class AbsHookPolicy {
     private fun callMainApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.processName != getPackageName()) return
         try {
-            XposedHelpers.findAndHookMethod(
-                Application::class.java, "onCreate", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val application = param.thisObject as Application
-                        val classLoader = application.classLoader!!
-                        if (application.getProcessName() == getPackageName()) {
-                            mainApplication = application
-                            //log("onMainApplicationCreate: ${getPackageName()}")
-                            onMainApplicationCreate(application, classLoader)
-                        }
+            val appCls = XposedHelpers.findClass(getMainApplicationName(), lpparam.classLoader)
+            XposedHelpers.findAndHookMethod(appCls, "onCreate", object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val application = param.thisObject as Application
+                    val classLoader = application.classLoader!!
+                    if (application.getProcessName() == getPackageName()) {
+                        mainApplication = application
+                        log("onMainApplicationCreate: ${getPackageName()}")
+                        onMainApplicationCreate(application, classLoader)
                     }
                 }
-            )
+            })
         } catch (t: Throwable) {
-            log("callMainApplicationCreate fail: ${getPackageName()}")
-            log(t.getStackInfo())
+            log("${getPackageName()} callMainApplicationCreate fail: ${t.getStackInfo()}")
         }
     }
 

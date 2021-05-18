@@ -20,6 +20,10 @@ class MiJiaHookPolicy : AbsHookPolicy() {
         return "com.xiaomi.smarthome"
     }
 
+    override fun getMainApplicationName(): String {
+        return "com.xiaomi.smarthome.application.SHApplication"
+    }
+
     override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
         removeHomePageAd(classLoader)
         removeMinePageAd(classLoader)

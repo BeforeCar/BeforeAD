@@ -1,6 +1,9 @@
 package com.beforecar.ad.policy.jd
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Application
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -12,14 +15,18 @@ import android.widget.Toast
 import com.beforecar.ad.policy.JDHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.utils.AppUtils
+import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 
 /**
  * @author: wangpan
  * @email: p.wang@aftership.com
  * @date: 2021/5/14
+ *
+ * 评论中心
  */
-class EvaluateCenterMainActivity {
+@SuppressLint("StaticFieldLeak")
+object EvaluateCenterMainActivity {
 
     /**
      * EvaluateCenterMainActivity 实例
@@ -32,6 +39,11 @@ class EvaluateCenterMainActivity {
     private var handler: Handler? = null
 
     /**
+     * button tag
+     */
+    private const val BUTTON_VIEW = "button_tag"
+
+    /**
      * 发布评论帮助类
      */
     private val jdPushCommentHelper = JDPushCommentHelper(this)
@@ -41,17 +53,58 @@ class EvaluateCenterMainActivity {
      */
     private var loadingDialog: LoadingDialog? = null
 
-    /**
-     * button tag
-     */
-    private val buttonView = "button_tag"
-
     private fun log(content: Any?) {
         JDHookPolicy.log(content)
     }
 
-    fun onCreate(activity: Activity) {
-        log("EvaluateCenterMainActivity onCreate")
+    fun startHook(application: Application, classLoader: ClassLoader) {
+        try {
+            //等待评论中心模块加载成功后开始 hook
+            val helperCls = XposedHelpers.findClass("com.jingdong.common.utils.AuraPreLoadBundleHelper", classLoader)
+            XposedHelpers.findAndHookMethod(helperCls, "preLoadClass", Runnable::class.java, object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val runnable = param.args[0] as Runnable
+                    if (runnable.javaClass.name == "com.jd.lib.evaluatecenter.a") {
+                        startHookInternal(application, classLoader)
+                    }
+                }
+            })
+        } catch (t: Throwable) {
+            log("startHookInternal fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun startHookInternal(application: Application, classLoader: ClassLoader) {
+        //监听生命周期
+        registerLifecycle(classLoader)
+    }
+
+    /**
+     * hook EvaluateCenterMainActivity
+     */
+    private fun registerLifecycle(classLoader: ClassLoader) {
+        try {
+            val activityCls = XposedHelpers.findClass(
+                "com.jd.lib.evaluatecenter.view.activity.EvaluateCenterMainActivity",
+                classLoader
+            )
+            XposedHelpers.findAndHookMethod(activityCls, "onCreate", Bundle::class.java, object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val activity = param.thisObject as Activity
+                    onCreate(activity)
+                }
+            })
+            XposedHelpers.findAndHookMethod(activityCls, "onDestroy", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    onDestroy()
+                }
+            })
+        } catch (t: Throwable) {
+            log("registerLifecycle fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun onCreate(activity: Activity) {
         currentActivity = activity
         handler = Handler(Looper.getMainLooper())
         val button = addCommentButton(activity)
@@ -60,8 +113,7 @@ class EvaluateCenterMainActivity {
         }
     }
 
-    fun onDestroy() {
-        log("EvaluateCenterMainActivity onDestroy")
+    private fun onDestroy() {
         stopPushComment()
         handler?.removeCallbacksAndMessages(null)
         handler = null
@@ -86,7 +138,7 @@ class EvaluateCenterMainActivity {
                 bottomMargin = AppUtils.dp2px(activity, 32f).toInt()
                 rightMargin = AppUtils.dp2px(activity, 16f).toInt()
             }
-            tag = buttonView
+            tag = BUTTON_VIEW
         }
         contentLayout.addView(button)
         return button
@@ -95,7 +147,7 @@ class EvaluateCenterMainActivity {
     private fun findCommentButton(contentLayout: FrameLayout): View? {
         for (index in 0 until contentLayout.childCount) {
             val child = contentLayout.getChildAt(index)
-            if (child.tag == buttonView) {
+            if (child.tag == BUTTON_VIEW) {
                 return child
             }
         }

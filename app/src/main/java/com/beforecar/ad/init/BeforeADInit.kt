@@ -19,8 +19,8 @@ class BeforeADInit : IXposedHookLoadPackage {
 
     init {
         appPolicies.add(MiguMusicADPolicy())
-        appPolicies.add(XiaoMiMarketHookPolicy())
-        appPolicies.add(XiaoMiShopHookPolicy())
+        appPolicies.add(MiAppMarketHookPolicy())
+        appPolicies.add(MiShopHookPolicy())
         appPolicies.add(MiJiaHookPolicy())
         appPolicies.add(MobileTicketHookPolicy())
         appPolicies.add(WeiXinHookPolicy())

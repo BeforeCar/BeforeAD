@@ -11,11 +11,12 @@ import de.robv.android.xposed.XposedHelpers
  * @author: wangpan
  * @email: p.wang@aftership.com
  * @date: 2021/5/6
+ *
  * 小米应用商店
  */
-class XiaoMiMarketHookPolicy : AbsHookPolicy() {
+class MiAppMarketHookPolicy : AbsHookPolicy() {
 
-    override val tag: String = "tag_xiaomi_market"
+    override val tag: String = "tag_mi_app"
 
     override fun getPackageName(): String {
         return "com.xiaomi.market"
