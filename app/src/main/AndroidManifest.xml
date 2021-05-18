@@ -36,7 +36,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 接收京东 app log 的广播接收者 -->
+        <!-- 接收 app log 的广播接收者 -->
         <receiver
             android:name=".AppLogReceiver"
             android:enabled="true"
