@@ -22,6 +22,10 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         return "com.ss.android.article.news"
     }
 
+    override fun getMainApplicationName(): String {
+        return "com.ss.android.article.news.ArticleApplication"
+    }
+
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         super.handleLoadPackage(lpparam)
         if (lpparam.processName != lpparam.packageName) return

@@ -14,14 +14,19 @@ import de.robv.android.xposed.XposedHelpers
  * @author: wangpan
  * @email: p.wang@aftership.com
  * @date: 2021/5/6
+ *
  * 小米商城
  */
-class XiaoMiShopHookPolicy : AbsHookPolicy() {
+class MiShopHookPolicy : AbsHookPolicy() {
 
-    override val tag: String = "tag_xiaomi_shop"
+    override val tag: String = "tag_mi_shop"
 
     override fun getPackageName(): String {
         return "com.xiaomi.shop"
+    }
+
+    override fun getMainApplicationName(): String {
+        return "com.xiaomi.shop.MainApplication"
     }
 
     override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
