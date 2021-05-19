@@ -11,6 +11,7 @@
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
 
     <string-array name="scope">
+        <item>com.beforecar.ad</item>
         <item>cmccwm.mobilemusic</item>
         <item>com.xiaomi.market</item>
         <item>com.xiaomi.shop</item>

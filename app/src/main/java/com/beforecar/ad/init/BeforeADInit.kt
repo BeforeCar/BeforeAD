@@ -18,6 +18,7 @@ class BeforeADInit : IXposedHookLoadPackage {
     private val appPolicies = mutableListOf<AbsHookPolicy>()
 
     init {
+        appPolicies.add(BeforeAdHookPolicy())
         appPolicies.add(MiguMusicADPolicy())
         appPolicies.add(MiAppMarketHookPolicy())
         appPolicies.add(MiShopHookPolicy())

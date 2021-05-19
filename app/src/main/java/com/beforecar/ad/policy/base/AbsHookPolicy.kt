@@ -2,19 +2,16 @@ package com.beforecar.ad.policy.base
 
 import android.app.Activity
 import android.app.Application
-import android.content.ComponentName
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.CallSuper
+import com.beforecar.ad.utils.AppLogHelper
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import org.json.JSONObject
 
 /**
  * Author: minminaya  承接东风各式弹头打磨、抛光、刷漆等4S保养工程。
@@ -223,16 +220,10 @@ abstract class AbsHookPolicy {
         return false
     }
 
-    open fun log(content: Any?) {
-        if (isSendBroadcastLog()) {
-            val intent = Intent("action_app_log_broadcast").apply {
-                component = ComponentName("com.beforecar.ad", "com.beforecar.ad.AppLogReceiver")
-                val jsonLog = JSONObject()
-                jsonLog.put("tag", tag)
-                jsonLog.put("content", content.toString())
-                data = Uri.parse(jsonLog.toString())
-            }
-            mainApplication?.sendBroadcast(intent)
+    fun log(content: Any?) {
+        val context = mainApplication
+        if (isSendBroadcastLog() && context != null) {
+            AppLogHelper.sendLogBroadcast(context, tag, content)
         } else {
             XposedBridge.log("$tag: $content")
         }
