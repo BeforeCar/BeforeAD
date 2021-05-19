@@ -3,9 +3,6 @@ package com.beforecar.ad
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
-import org.json.JSONException
-import org.json.JSONObject
 
 /**
  * @author: wangpan
@@ -17,13 +14,7 @@ import org.json.JSONObject
 class AppLogReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val content = intent.data?.toString() ?: ""
-        try {
-            val jsonLog = JSONObject(content)
-            Log.i(jsonLog.optString("tag"), jsonLog.optString("content"))
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
+        //日志会在 BeforeAdHookPolicy 中输出
     }
 
 }
