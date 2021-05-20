@@ -5,6 +5,7 @@ import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.policy.jd.EvaluateCenterMainActivity
 import com.beforecar.ad.policy.jd.ProductDetailActivity
+import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 
 /**
@@ -37,6 +38,26 @@ object JDHookPolicy : AbsHookPolicy() {
         ProductDetailActivity.startHook(application, classLoader)
         //启动页广告
         removeSplashAd(classLoader)
+        //屏蔽应用更新
+        disableCheckUpgrade(classLoader)
+    }
+
+    /**
+     * 屏蔽应用更新
+     */
+    private fun disableCheckUpgrade(classLoader: ClassLoader) {
+        try {
+            val updateCls = XposedHelpers.findClass("com.jingdong.app.mall.update.UpdateInitialization", classLoader)
+            val activityCls = XposedHelpers.findClass("com.jingdong.common.frame.IMyActivity", classLoader)
+            XposedHelpers.findAndHookMethod(updateCls, "checkVersion", activityCls, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = null
+                    log("disableCheckUpgrade success")
+                }
+            })
+        } catch (t: Throwable) {
+            log("disableCheckUpgrade fail: ${t.getStackInfo()}")
+        }
     }
 
     private fun removeSplashAd(classLoader: ClassLoader) {
