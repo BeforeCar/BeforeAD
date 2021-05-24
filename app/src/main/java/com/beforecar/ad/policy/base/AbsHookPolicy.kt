@@ -62,13 +62,22 @@ abstract class AbsHookPolicy {
         try {
             val appCls = XposedHelpers.findClass(getMainApplicationName(), lpparam.classLoader)
             XposedHelpers.findAndHookMethod(appCls, "onCreate", object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: MethodHookParam) {
                     val application = param.thisObject as Application
                     val classLoader = application.classLoader!!
                     if (application.getProcessName() == getPackageName()) {
                         mainApplication = application
-                        log("onMainApplicationCreate: ${getPackageName()}")
-                        onMainApplicationCreate(application, classLoader)
+                        log("onMainApplicationBeforeCreate: ${getPackageName()}")
+                        onMainApplicationBeforeCreate(application, classLoader)
+                    }
+                }
+
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val application = param.thisObject as Application
+                    val classLoader = application.classLoader!!
+                    if (application.getProcessName() == getPackageName()) {
+                        log("onMainApplicationAfterCreate: ${getPackageName()}")
+                        onMainApplicationAfterCreate(application, classLoader)
                     }
                 }
             })
@@ -98,9 +107,16 @@ abstract class AbsHookPolicy {
     }
 
     /**
-     * 应用的主进程 Application 的 onCreate 调用
+     * 应用的主进程 Application 的 onCreate 之前调用
      */
-    open fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    open fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+
+    }
+
+    /**
+     * 应用的主进程 Application 的 onCreate 之后调用
+     */
+    open fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
 
     }
 

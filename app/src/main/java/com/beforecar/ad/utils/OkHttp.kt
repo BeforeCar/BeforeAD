@@ -76,4 +76,16 @@ object OkHttp {
         return null
     }
 
+    /**
+     * 判断响应是否成功
+     */
+    fun isSuccessful(response: Any): Boolean {
+        try {
+            return XposedHelpers.callMethod(response, "isSuccessful") as Boolean
+        } catch (t: Throwable) {
+            XposedBridge.log("isSuccessful fail: ${t.getStackInfo()}")
+        }
+        return false
+    }
+
 }

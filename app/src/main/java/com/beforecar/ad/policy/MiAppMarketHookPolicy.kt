@@ -22,7 +22,7 @@ class MiAppMarketHookPolicy : AbsHookPolicy() {
         return "com.xiaomi.market"
     }
 
-    override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         removeSplashAd(classLoader)
     }
 

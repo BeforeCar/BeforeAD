@@ -31,7 +31,7 @@ class BaiduHookPolicy : AbsHookPolicy() {
 
     private var versionName: String = ""
 
-    override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         this.versionName = application.getVersionName()
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
