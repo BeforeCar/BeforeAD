@@ -29,7 +29,7 @@ class MiShopHookPolicy : AbsHookPolicy() {
         return "com.xiaomi.shop.MainApplication"
     }
 
-    override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         removeShortcut()
         skipSplashAd(classLoader)
     }

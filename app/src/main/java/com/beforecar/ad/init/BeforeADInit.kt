@@ -30,6 +30,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(BaiduHookPolicy())
         appPolicies.add(TouTiaoHookPolicy())
         appPolicies.add(JDHookPolicy)
+        appPolicies.add(XunLeiHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

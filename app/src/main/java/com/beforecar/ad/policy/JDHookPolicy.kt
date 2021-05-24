@@ -31,7 +31,7 @@ object JDHookPolicy : AbsHookPolicy() {
         return true
     }
 
-    override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         //评论中心
         EvaluateCenterMainActivity.startHook(application, classLoader)
         //商品详情

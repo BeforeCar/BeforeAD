@@ -31,7 +31,7 @@ object WeiBoHookPolicy : AbsHookPolicy() {
         return "com.sina.weibo.WeiboApplication"
     }
 
-    override fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
         //移除开屏广告
