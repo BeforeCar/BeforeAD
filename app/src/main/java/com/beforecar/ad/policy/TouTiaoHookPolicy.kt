@@ -1,12 +1,11 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
+import android.content.Context
 import com.beforecar.ad.policy.base.AbsHookPolicy
-import com.beforecar.ad.policy.base.getProcessName
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.json.JSONObject
 
 /**
@@ -26,28 +25,7 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         return "com.ss.android.article.news.ArticleApplication"
     }
 
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        super.handleLoadPackage(lpparam)
-        if (lpparam.processName != lpparam.packageName) return
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.ss.android.article.news.ArticleApplication", lpparam.classLoader,
-                "onCreate", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val application = param.thisObject as Application
-                        val classLoader = application.classLoader!!
-                        if (application.getProcessName() == getPackageName()) {
-                            onAppCreated(application, classLoader)
-                        }
-                    }
-                }
-            )
-        } catch (t: Throwable) {
-            log("onAppCreated fail: ${t.getStackInfo()}")
-        }
-    }
-
-    private fun onAppCreated(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         //hook CallServerInterceptor 拦截器
         hookCallServerInterceptor(classLoader)
         //闪屏页广告
@@ -59,17 +37,41 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
      */
     private fun removeSplashAd(classLoader: ClassLoader) {
         try {
-            val activityCls = XposedHelpers.findClassIfExists(
-                "com.ss.android.article.base.feature.main.ArticleMainActivity",
-                classLoader
-            ) ?: return
             log("removeSplashAd start")
-            XposedHelpers.findAndHookMethod(activityCls, "tryShowSplashAdView", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.result = null
-                    log("removeSplashAd success")
+            val adImplCls = XposedHelpers.findClass("com.ss.android.splashad.splash.SplashAdDependImpl", classLoader)
+            XposedHelpers.findAndHookMethod(
+                adImplCls, "canShowPreview", object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("hook canShowPreview")
+                        param.result = false
+                    }
                 }
-            })
+            )
+            XposedHelpers.findAndHookMethod(
+                adImplCls, "hasSplashAdNow", object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("hook hasSplashAdNow")
+                        param.result = false
+                    }
+                }
+            )
+            XposedHelpers.findAndHookMethod(
+                adImplCls, "sendSelectAdEvent", String::class.java, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("hook sendSelectAdEvent")
+                        param.result = null
+                    }
+                }
+            )
+            XposedHelpers.findAndHookMethod(
+                adImplCls, "onPushMsgReceived", JSONObject::class.java, Context::class.java,
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("hook onPushMsgReceived")
+                        param.result = null
+                    }
+                }
+            )
         } catch (t: Throwable) {
             log("removeSplashAd fail: ${t.getStackInfo()}")
         }
@@ -208,13 +210,13 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
             val result = JSONObject(string)
             val data = result.optJSONArray("data") ?: return string
             var adItemCount = 0
+            val adTypes = listOf(48, 49, 1860)
             for (index in 0 until data.length()) {
                 val item = data.optJSONObject(index)
                 val content = JSONObject(item.optString("content"))
                 val cellType = content.optInt("cell_type")
                 val label = content.optString("label")
-                //cellType == 48: 小视频推荐item
-                if (cellType == 48 || label.contains("广告")) {
+                if (cellType in adTypes || label.contains("广告")) {
                     item.put("content", "")
                     adItemCount++
                 }
