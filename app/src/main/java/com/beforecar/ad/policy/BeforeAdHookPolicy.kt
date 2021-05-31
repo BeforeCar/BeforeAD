@@ -22,7 +22,7 @@ class BeforeAdHookPolicy : AbsHookPolicy() {
         return "com.beforecar.ad"
     }
 
-    override fun onApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         hookAppLogReceiver(classLoader)
     }
 

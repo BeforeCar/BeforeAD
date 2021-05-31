@@ -27,10 +27,6 @@ object WeiBoHookPolicy : AbsHookPolicy() {
         return "com.sina.weibo"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.sina.weibo.WeiboApplication"
-    }
-
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)

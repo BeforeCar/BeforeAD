@@ -21,10 +21,6 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         return "com.ss.android.article.news"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.ss.android.article.news.ArticleApplication"
-    }
-
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         //hook CallServerInterceptor 拦截器
         hookCallServerInterceptor(classLoader)

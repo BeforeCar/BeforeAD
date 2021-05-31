@@ -23,10 +23,6 @@ object JDHookPolicy : AbsHookPolicy() {
         return "com.jingdong.app.mall"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.jd.chappie.loader.ChappieApplication"
-    }
-
     override fun isSendBroadcastLog(): Boolean {
         return true
     }

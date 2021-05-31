@@ -30,52 +30,40 @@ abstract class AbsHookPolicy {
     private var mainApplication: Application? = null
 
     /**
-     * application 可能是任何一个进程的，目前只是给 Toast 使用，慎用
-     */
-    private var anyThreadApplication: Application? = null
-
-    /**
      * hook 应用的包名
      * @return String
      */
     abstract fun getPackageName(): String
-
-    /**
-     * 应用的主 application 全类名
-     * @return String
-     */
-    open fun getMainApplicationName(): String {
-        return "android.app.Application"
-    }
 
     private var unHookByActivityForMainThread: XC_MethodHook.Unhook? = null
     private var unHookByActivity: XC_MethodHook.Unhook? = null
 
     @CallSuper
     open fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        callMainApplicationCreate(lpparam)
         callApplicationCreate(lpparam)
         callFirstActivityOnCreate(lpparam)
         callMainFirstActivityOnCreate(lpparam)
     }
 
-    private fun findApplicationOnCreateMethod(className: String, classLoader: ClassLoader): Method {
-        val applicationCls = Application::class.java
-        var targetClass = XposedHelpers.findClass(className, classLoader)
-        var onCreateMethod: Method? = XposedHelpers.findMethodExactIfExists(targetClass, "onCreate")
-        var superClass: Class<*>? = targetClass.superclass
-        while (onCreateMethod == null && applicationCls.isAssignableFromKt(superClass)) {
-            targetClass = superClass
-            onCreateMethod = XposedHelpers.findMethodExactIfExists(targetClass, "onCreate")
-            superClass = targetClass.superclass
+    /**
+     * 获取 application 的 onCreate 方法
+     */
+    private fun findApplicationOnCreateMethod(appClassName: String, classLoader: ClassLoader): Method {
+        var appClass = XposedHelpers.findClass(appClassName, classLoader)
+        var onCreateMethod: Method? = XposedHelpers.findMethodExactIfExists(appClass, "onCreate")
+        var superClass: Class<*>? = appClass.superclass
+        while (onCreateMethod == null && Application::class.java.isAssignableFromKt(superClass)) {
+            appClass = superClass
+            onCreateMethod = XposedHelpers.findMethodExactIfExists(appClass, "onCreate")
+            superClass = appClass.superclass
         }
-        return onCreateMethod ?: throw NoSuchMethodException("onCreate method not found: $className")
+        return onCreateMethod ?: throw NoSuchMethodException("onCreate method not found: $appClassName")
     }
 
-    private fun callMainApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.processName != getPackageName()) return
+    private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            val method = findApplicationOnCreateMethod(getMainApplicationName(), lpparam.classLoader)
+            val appClassName = lpparam.appInfo.className ?: Application::class.java.name
+            val method = findApplicationOnCreateMethod(appClassName, lpparam.classLoader)
             XposedBridge.hookMethod(method, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val application = param.thisObject as Application
@@ -84,6 +72,9 @@ abstract class AbsHookPolicy {
                         mainApplication = application
                         log("onMainApplicationBeforeCreate: ${getPackageName()}")
                         onMainApplicationBeforeCreate(application, classLoader)
+                    } else {
+                        log("onMinorApplicationBeforeCreate: ${getPackageName()}")
+                        onMinorApplicationBeforeCreate(application, classLoader)
                     }
                 }
 
@@ -93,23 +84,10 @@ abstract class AbsHookPolicy {
                     if (application.getProcessName() == getPackageName()) {
                         log("onMainApplicationAfterCreate: ${getPackageName()}")
                         onMainApplicationAfterCreate(application, classLoader)
+                    } else {
+                        log("onMinorApplicationAfterCreate: ${getPackageName()}")
+                        onMinorApplicationAfterCreate(application, classLoader)
                     }
-                }
-            })
-        } catch (t: Throwable) {
-            log("callMainApplicationCreate fail: ${t.getStackInfo()}")
-        }
-    }
-
-    private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
-        try {
-            XposedHelpers.findAndHookMethod(Application::class.java, "onCreate", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    val application = param.thisObject as Application
-                    val classLoader = application.classLoader!!
-                    log("onApplicationCreate: ${getPackageName()}")
-                    onApplicationCreate(application, classLoader)
-                    anyThreadApplication = application
                 }
             })
         } catch (t: Throwable) {
@@ -132,14 +110,20 @@ abstract class AbsHookPolicy {
     }
 
     /**
-     * 应用的每个进程 Application 的 onCreate 调用
+     * 应用子进程 Application 的 onCreate 之前调用
      */
-    open fun onApplicationCreate(application: Application, classLoader: ClassLoader) {
+    open fun onMinorApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+
+    }
+
+    /**
+     * 应用子进程 Application 的 onCreate 之后调用, 每个进程都会执行
+     */
+    open fun onMinorApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
 
     }
 
     private fun callFirstActivityOnCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
-
         try {
             unHookByActivity = XposedHelpers.findAndHookMethod(
                 Activity::class.java, "onCreate", Bundle::class.java, object : XC_MethodHook() {
@@ -277,10 +261,9 @@ abstract class AbsHookPolicy {
     }
 
     fun showToast(msg: String, duration: Int = Toast.LENGTH_SHORT) {
-        anyThreadApplication?.run {
-            runOnUIThread {
-                Toast.makeText(anyThreadApplication, msg, duration).show()
-            }
+        val context = mainApplication ?: return
+        runOnUIThread {
+            Toast.makeText(context, msg, duration).show()
         }
     }
 

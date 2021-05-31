@@ -23,10 +23,6 @@ class WeiXinHookPolicy : AbsHookPolicy() {
         return "com.tencent.mm"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.tencent.mm.app.Application"
-    }
-
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         removePYQAdItems(application, classLoader)
     }
