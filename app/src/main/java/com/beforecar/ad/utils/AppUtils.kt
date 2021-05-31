@@ -47,4 +47,11 @@ object AppUtils {
         webView.destroy()
     }
 
+    fun Class<*>.isAssignableFromKt(childClazz: Class<*>?): Boolean {
+        if (childClazz == null) {
+            return false
+        }
+        return this.isAssignableFrom(childClazz)
+    }
+
 }
