@@ -20,7 +20,12 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
         return "com.miui.systemAdSolution"
     }
 
-    override fun onApplicationCreate(application: Application, classLoader: ClassLoader) {
+    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+        removeSplashAd(application, classLoader)
+        removeSplashUI(application, classLoader)
+    }
+
+    override fun onMinorApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         removeSplashAd(application, classLoader)
         removeSplashUI(application, classLoader)
     }

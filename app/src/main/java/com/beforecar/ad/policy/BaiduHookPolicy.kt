@@ -25,10 +25,6 @@ class BaiduHookPolicy : AbsHookPolicy() {
         return "com.baidu.searchbox"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.baidu.searchbox.SearchboxApplication"
-    }
-
     private var versionName: String = ""
 
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {

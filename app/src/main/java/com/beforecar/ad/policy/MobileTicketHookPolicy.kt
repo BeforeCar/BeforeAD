@@ -20,10 +20,6 @@ class MobileTicketHookPolicy : AbsHookPolicy() {
         return "com.MobileTicket"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.alipay.mobile.quinox.LauncherApplication"
-    }
-
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
         removeMainPageAd(classLoader)
         removePopupAd(classLoader)

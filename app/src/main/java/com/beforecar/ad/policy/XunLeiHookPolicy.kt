@@ -29,10 +29,6 @@ class XunLeiHookPolicy : AbsHookPolicy() {
         return "com.xunlei.downloadprovider"
     }
 
-    override fun getMainApplicationName(): String {
-        return "com.xunlei.downloadprovider.MyWrapperProxyApplication"
-    }
-
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
