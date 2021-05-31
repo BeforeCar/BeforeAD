@@ -8,10 +8,12 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.CallSuper
 import com.beforecar.ad.utils.AppLogHelper
+import com.beforecar.ad.utils.AppUtils.isAssignableFromKt
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.lang.reflect.Method
 
 /**
  * Author: minminaya  承接东风各式弹头打磨、抛光、刷漆等4S保养工程。
@@ -57,11 +59,24 @@ abstract class AbsHookPolicy {
         callMainFirstActivityOnCreate(lpparam)
     }
 
+    private fun findApplicationOnCreateMethod(className: String, classLoader: ClassLoader): Method {
+        val applicationCls = Application::class.java
+        var targetClass = XposedHelpers.findClass(className, classLoader)
+        var onCreateMethod: Method? = XposedHelpers.findMethodExactIfExists(targetClass, "onCreate")
+        var superClass: Class<*>? = targetClass.superclass
+        while (onCreateMethod == null && applicationCls.isAssignableFromKt(superClass)) {
+            targetClass = superClass
+            onCreateMethod = XposedHelpers.findMethodExactIfExists(targetClass, "onCreate")
+            superClass = targetClass.superclass
+        }
+        return onCreateMethod ?: throw NoSuchMethodException("onCreate method not found: $className")
+    }
+
     private fun callMainApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.processName != getPackageName()) return
         try {
-            val appCls = XposedHelpers.findClass(getMainApplicationName(), lpparam.classLoader)
-            XposedHelpers.findAndHookMethod(appCls, "onCreate", object : XC_MethodHook() {
+            val method = findApplicationOnCreateMethod(getMainApplicationName(), lpparam.classLoader)
+            XposedBridge.hookMethod(method, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val application = param.thisObject as Application
                     val classLoader = application.classLoader!!
@@ -82,27 +97,23 @@ abstract class AbsHookPolicy {
                 }
             })
         } catch (t: Throwable) {
-            log("${getPackageName()} callMainApplicationCreate fail: ${t.getStackInfo()}")
+            log("callMainApplicationCreate fail: ${t.getStackInfo()}")
         }
     }
 
     private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            XposedHelpers.findAndHookMethod(
-                Application::class.java,
-                "onCreate",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val application = param.thisObject as Application
-                        val classLoader = application.classLoader!!
-                        //log("callApplicationCreate: ${getPackageName()}")
-                        onApplicationCreate(application, classLoader)
-                        anyThreadApplication = application
-                    }
-                })
+            XposedHelpers.findAndHookMethod(Application::class.java, "onCreate", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val application = param.thisObject as Application
+                    val classLoader = application.classLoader!!
+                    log("onApplicationCreate: ${getPackageName()}")
+                    onApplicationCreate(application, classLoader)
+                    anyThreadApplication = application
+                }
+            })
         } catch (t: Throwable) {
-            log("callApplicationCreate fail: ${getPackageName()}")
-            log(t.getStackInfo())
+            log("callApplicationCreate fail: ${t.getStackInfo()}")
         }
     }
 
