@@ -100,17 +100,21 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
                             url.contains("api/feed/thread_aggr/v1/") -> {
                                 removePostInnerFeedAdItems(body)
                             }
+                            //视频详情页播放完后的广告
+                            url.contains("api/ad/post_patch/v1") -> {
+                                removeVideoAdItems(body)
+                            }
                         }
                     }
 
                     private fun getBodyFromResponse(response: Any): Any? {
                         try {
-                            val bodyCls = XposedHelpers.findClass(
+                            val bodyClass = XposedHelpers.findClass(
                                 "com.bytedance.retrofit2.mime.TypedByteArray",
                                 response.javaClass.classLoader
                             )
                             val body = XposedHelpers.callMethod(response, "getBody")
-                            if (body != null && bodyCls == body.javaClass) {
+                            if (body != null && bodyClass == body.javaClass) {
                                 return body
                             }
                         } catch (t: Throwable) {
@@ -218,6 +222,36 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
                 }
             }
             log("removeFeedListAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeFeedListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 视频详情页播放完后的广告
+     */
+    private fun removeVideoAdItems(body: Any) {
+        try {
+            log("removeVideoAdItems start")
+            val string = getBodyString(body)
+            val newString = removeVideoAdItemString(string)
+            setBodyString(body, newString)
+        } catch (t: Throwable) {
+            log("removeVideoAdItems fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun removeVideoAdItemString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data") ?: return string
+            val adItems = data.optJSONArray("ad_item")
+            if (adItems != null && adItems.length() > 0) {
+                data.put("ad_item", "")
+                log("removeVideoAdItems success: ${adItems.length()}")
+            }
             return result.toString()
         } catch (t: Throwable) {
             log("removeFeedListAdString fail: ${t.getStackInfo()}")
