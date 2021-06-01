@@ -1,12 +1,14 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
-import android.content.Context
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
+import com.beforecar.ad.utils.FileUtils
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * @author: wangpan
@@ -25,49 +27,24 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         //hook CallServerInterceptor 拦截器
         hookCallServerInterceptor(classLoader)
         //闪屏页广告
-        removeSplashAd(classLoader)
+        removeSplashAd(application)
     }
 
     /**
      * 移除启动页广告
      */
-    private fun removeSplashAd(classLoader: ClassLoader) {
+    private fun removeSplashAd(application: Application) {
         try {
-            log("removeSplashAd start")
-            val adImplCls = XposedHelpers.findClass("com.ss.android.splashad.splash.SplashAdDependImpl", classLoader)
-            XposedHelpers.findAndHookMethod(
-                adImplCls, "canShowPreview", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("hook canShowPreview")
-                        param.result = false
-                    }
-                }
-            )
-            XposedHelpers.findAndHookMethod(
-                adImplCls, "hasSplashAdNow", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("hook hasSplashAdNow")
-                        param.result = false
-                    }
-                }
-            )
-            XposedHelpers.findAndHookMethod(
-                adImplCls, "sendSelectAdEvent", String::class.java, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("hook sendSelectAdEvent")
-                        param.result = null
-                    }
-                }
-            )
-            XposedHelpers.findAndHookMethod(
-                adImplCls, "onPushMsgReceived", JSONObject::class.java, Context::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("hook onPushMsgReceived")
-                        param.result = null
-                    }
-                }
-            )
+            val path1 = application.getExternalFilesDir(null)?.absolutePath ?: ""
+            val bool1 = FileUtils.deleteFilesInDir(File("$path1/splashCache/"))
+
+            val path2 = application.filesDir.absolutePath
+            val bool2 = FileUtils.deleteFilesInDir(File("$path2/splashCache/"))
+
+            val path3 = application.externalCacheDir?.parent ?: ""
+            val bool3 = FileUtils.deleteFilesInDir(File("$path3/splashCache/"))
+
+            log("removeSplashAd success: $bool1, $bool2, $bool3")
         } catch (t: Throwable) {
             log("removeSplashAd fail: ${t.getStackInfo()}")
         }
@@ -103,6 +80,14 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
                             //视频详情页播放完后的广告
                             url.contains("api/ad/post_patch/v1") -> {
                                 removeVideoAdItems(body)
+                            }
+                            //启动页广告
+                            url.contains("api/ad/splash/news_article/v14") -> {
+                                removeSplashAdItems(body)
+                            }
+                            //小程序推荐
+                            url.contains("tfe/route/micro_recommend/list/v1") -> {
+                                removeMicroRecommendItems(body)
                             }
                         }
                     }
@@ -247,14 +232,74 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         try {
             val result = JSONObject(string)
             val data = result.optJSONObject("data") ?: return string
-            val adItems = data.optJSONArray("ad_item")
-            if (adItems != null && adItems.length() > 0) {
+            val adItems = data.optJSONArray("ad_item") ?: JSONArray()
+            var adItemCount = 0
+            if (adItems.length() > 0) {
                 data.put("ad_item", "")
-                log("removeVideoAdItems success: ${adItems.length()}")
+                adItemCount = adItems.length()
             }
+            log("removeVideoAdItemString success: $adItemCount")
             return result.toString()
         } catch (t: Throwable) {
             log("removeFeedListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 去除启动页广告
+     */
+    private fun removeSplashAdItems(body: Any) {
+        try {
+            log("removeSplashAdItems start")
+            val string = getBodyString(body)
+            val newString = removeSplashAdItemString(string)
+            setBodyString(body, newString)
+        } catch (t: Throwable) {
+            log("removeSplashAdItems fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun removeSplashAdItemString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data")
+            if (data != null) {
+                result.put("data", "")
+                log("removeSplashAdItemString success")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeSplashAdItemString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 去除小程序推荐
+     */
+    private fun removeMicroRecommendItems(body: Any) {
+        try {
+            log("removeMicroRecommendItems start")
+            val string = getBodyString(body)
+            val newString = removeMicroRecommendItemString(string)
+            setBodyString(body, newString)
+        } catch (t: Throwable) {
+            log("removeMicroRecommendItems fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun removeMicroRecommendItemString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val dataItems = result.optJSONArray("data") ?: JSONArray()
+            if (dataItems.length() > 0) {
+                result.put("data", "")
+                log("removeMicroRecommendItemString success")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeMicroRecommendItemString fail: ${t.getStackInfo()}")
         }
         return string
     }
