@@ -38,8 +38,10 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
         removeSplashAd(application)
         //hook startActivity
         hookStartActivity()
-        //下载视频去除水印
-        downloadVideoWithoutWatermark(classLoader)
+        //保存视频去除水印
+        saveVideoWithoutWatermark(classLoader)
+        //保存图片去除水印
+        saveImageWithoutWatermark(classLoader)
     }
 
     /**
@@ -493,8 +495,9 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
     /**
      * 下载视频去除水印
      */
-    private fun downloadVideoWithoutWatermark(classLoader: ClassLoader) {
+    private fun saveVideoWithoutWatermark(classLoader: ClassLoader) {
         try {
+            //信息流列表视频
             XposedHelpers.findAndHookMethod(
                 "com.sup.android.mi.feed.repo.bean.cell.VideoFeedItem", classLoader, "getVideoDownload",
                 object : XC_MethodHook() {
@@ -503,7 +506,7 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
                         val originDownloadVideoModel = getOriginDownloadVideoModel(videoFeedItem)
                         if (originDownloadVideoModel != null) {
                             param.result = originDownloadVideoModel
-                            log("downloadVideoWithoutWatermark success")
+                            log("saveVideoWithoutWatermark feedList success")
                         }
                     }
 
@@ -521,8 +524,71 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
                     }
                 }
             )
+            //评论列表视频
+            XposedHelpers.findAndHookMethod(
+                "com.sup.android.mi.feed.repo.bean.comment.Comment", classLoader, "getVideoDownloadInfo",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val comment = param.thisObject as Any
+                        val playVideoModel = getPlayVideoModel(comment)
+                        if (playVideoModel != null) {
+                            param.result = playVideoModel
+                            log("saveVideoWithoutWatermark commentList success")
+                        }
+                    }
+
+                    private fun getPlayVideoModel(comment: Any): Any? {
+                        try {
+                            val result1 = XposedHelpers.getObjectField(comment, "videoDownloadInfo")
+                            val result2 = XposedHelpers.getObjectField(comment, "videoInfo")
+                            if (result1 != null && result2 != null && result1.javaClass == result2.javaClass) {
+                                return result2
+                            }
+                        } catch (t: Throwable) {
+                            log("getPlayVideoModel fail: ${t.getStackInfo()}")
+                        }
+                        return null
+                    }
+                }
+            )
         } catch (t: Throwable) {
-            log("downloadVideoWithoutWatermark fail: ${t.getStackInfo()}")
+            log("saveVideoWithoutWatermark fail: ${t.getStackInfo()}")
+        }
+    }
+
+    /**
+     * 保存图片去除水印
+     */
+    private fun saveImageWithoutWatermark(classLoader: ClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod(
+                "com.sup.android.base.model.ImageModel", classLoader, "getDownloadList",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val imageModel = param.thisObject as Any
+                        val urlList = getUrlList(imageModel)
+                        if (urlList != null) {
+                            param.result = urlList
+                            log("saveImageWithoutWatermark success")
+                        }
+                    }
+
+                    private fun getUrlList(imageModel: Any): Any? {
+                        try {
+                            val result1 = XposedHelpers.getObjectField(imageModel, "downloadList")
+                            val result2 = XposedHelpers.getObjectField(imageModel, "urlList")
+                            if (result1 != null && result2 != null && result1.javaClass == result2.javaClass) {
+                                return result2
+                            }
+                        } catch (t: Throwable) {
+                            log("getUrlList fail: ${t.getStackInfo()}")
+                        }
+                        return null
+                    }
+                }
+            )
+        } catch (t: Throwable) {
+            log("saveImageWithoutWatermark fail: ${t.getStackInfo()}")
         }
     }
 
