@@ -231,9 +231,10 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
                         val string = param.result as? String
                         if (string.isNullOrEmpty()) return
                         when {
-                            //推荐列表, 视频列表, 关注列表
-                            url.contains("bds/feed/stream") or
-                                    url.contains("bds/feed/follow_feed") -> {
+                            //推荐列表, 视频列表, 关注列表, 收藏列表
+                            url.contains("bds/feed/stream")
+                                    or url.contains("bds/feed/follow_feed")
+                                    or url.contains("bds/user/favorite") -> {
                                 log("removeFeedListAdItems api start")
                                 val newString = removeFeedListAdItems(string)
                                 if (newString != null) {
@@ -330,8 +331,7 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
             val dataItems = data.optJSONArray("data") ?: JSONArray()
             var adItemCount = 0
             JsonUtils.removeJSONArrayElements(dataItems) { item ->
-                val adInfo = item.optJSONObject("ad_info")
-                val isAdItem = adInfo != null
+                val isAdItem = isFeedIdItem(item)
                 if (isAdItem) {
                     adItemCount++
                 }
@@ -343,6 +343,27 @@ class PiPiXiaHookPolicy : AbsHookPolicy() {
             log("removeFeedListAdItems fail: ${t.getStackInfo()}")
         }
         return null
+    }
+
+    /**
+     * 是否是列表广告
+     */
+    private fun isFeedIdItem(dataItem: JSONObject): Boolean {
+        try {
+            //单纯的广告 item
+            val adInfo = dataItem.optJSONObject("ad_info")
+            if (adInfo != null) {
+                return true
+            }
+            //item 中包含推荐商品
+            val promotionInfo = dataItem.optJSONObject("item")?.optJSONObject("promotion_info")
+            if (promotionInfo != null) {
+                return true
+            }
+        } catch (t: Throwable) {
+            log("isFeedIdItem fail: ${t.getStackInfo()}")
+        }
+        return false
     }
 
     /**
