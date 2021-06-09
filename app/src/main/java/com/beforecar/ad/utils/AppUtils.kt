@@ -6,6 +6,8 @@ import android.util.TypedValue
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.WebView
+import java.net.MalformedURLException
+import java.net.URL
 
 /**
  * @author: wangpan
@@ -52,6 +54,17 @@ object AppUtils {
             return false
         }
         return this.isAssignableFrom(childClazz)
+    }
+
+    fun String?.getUrlPath(): String {
+        if (this.isNullOrEmpty()) {
+            return ""
+        }
+        return try {
+            URL(this).path ?: ""
+        } catch (e: MalformedURLException) {
+            ""
+        }
     }
 
 }
