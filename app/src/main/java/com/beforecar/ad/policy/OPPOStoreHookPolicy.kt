@@ -1,10 +1,12 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
+import com.beforecar.ad.okhttp.OkHttpHelper
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.XposedBridge
+import java.io.IOException
 
 /**
  * @author: wangpan
@@ -15,43 +17,56 @@ import de.robv.android.xposed.XposedHelpers
  */
 class OPPOStoreHookPolicy : AbsHookPolicy() {
 
-    companion object {
-
-        const val ProtoReader = "com.squareup.wire.ProtoReader"
-
-        /**
-         * 启动页 Banners 类解析器
-         */
-        const val ProtoAdapter_Banners = "com.oppo.store.protobuf.Banners\$ProtoAdapter_Banners"
-
-    }
-
     override val tag: String = "tag_ostore"
+
+    private var okHttpHelper: OkHttpHelper? = null
 
     override fun getPackageName(): String {
         return "com.oppo.store"
     }
 
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        //移除启动页广告
-        removeSplashAd(classLoader)
+        //每次启动重置
+        okHttpHelper = null
+        //hook RealCall
+        hookRealCall(classLoader)
+    }
+
+    private fun getOkHttpHelper(): OkHttpHelper {
+        return okHttpHelper ?: kotlin.run {
+            OkHttpHelper.create(
+                realCall = "okhttp3.RealCall",
+                getResponseWithInterceptorChain = "e",
+                getRequest = "request"
+            ).also {
+                okHttpHelper = it
+            }
+        }
     }
 
     /**
-     * 移除启动页广告
+     * hook RealCall
      */
-    private fun removeSplashAd(classLoader: ClassLoader) {
+    private fun hookRealCall(classLoader: ClassLoader) {
         try {
-            val protoAdapterCls = XposedHelpers.findClass(ProtoAdapter_Banners, classLoader)
-            val protoReaderCls = XposedHelpers.findClass(ProtoReader, classLoader)
-            XposedHelpers.findAndHookMethod(protoAdapterCls, "decode", protoReaderCls, object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.result = null
-                    log("removeSplashAd success")
+            XposedBridge.hookMethod(
+                getOkHttpHelper().getResponseWithInterceptorChainMethod(classLoader),
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val realCall = param.thisObject as Any
+                        val url = getOkHttpHelper().getUrl(realCall)
+                        when {
+                            //启动页广告
+                            url.contains("/configs/v1/screens/010001") -> {
+                                param.throwable = IOException("disable splash ad")
+                                log("removeSplashAd success")
+                            }
+                        }
+                    }
                 }
-            })
+            )
         } catch (t: Throwable) {
-            log("removeSplashAd fail: ${t.getStackInfo()}")
+            log("hookRealCall fail: ${t.getStackInfo()}")
         }
     }
 
