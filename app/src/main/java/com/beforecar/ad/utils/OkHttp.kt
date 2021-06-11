@@ -26,6 +26,25 @@ object OkHttp {
     }
 
     /**
+     * 从 request 中获取请求的 url
+     */
+    fun getUrlFromRequest(request: Any): String {
+        try {
+            val string = request.toString()
+            val startTag = ", url="
+            val endTag = ", tag="
+            val startIndex = string.indexOf(startTag)
+            val endIndex = string.indexOf(endTag)
+            if (startIndex != -1 && endIndex != -1) {
+                return string.substring(startIndex + startTag.length, endIndex)
+            }
+        } catch (t: Throwable) {
+            XposedBridge.log("getUrlFromRequest fail: ${t.getStackInfo()}")
+        }
+        return ""
+    }
+
+    /**
      * 获取 response 中的数据
      */
     @Throws(Throwable::class)
