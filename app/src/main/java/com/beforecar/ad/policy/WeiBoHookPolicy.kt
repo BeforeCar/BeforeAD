@@ -112,6 +112,14 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                                 log("removeMinePageAds api success")
                             }
                         }
+                        url.contains("profile/me") -> {
+                            log("removeMinePageAds2 api start")
+                            val newResponse = removeMinePageAds2(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeMinePageAds2 api success")
+                            }
+                        }
                     }
                 }
             })
@@ -411,6 +419,44 @@ object WeiBoHookPolicy : AbsHookPolicy() {
             return result.toString()
         } catch (t: Throwable) {
             log("removeMinePageAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 移除我的 tab 页广告
+     */
+    private fun removeMinePageAds2(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeMinePageAdString2(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeMinePageAds2 fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeMinePageAdString2(string: String): String {
+        try {
+            val result = JSONObject(string)
+            //设置没有下一页
+            result.optJSONObject("moreInfo")?.put("noMore", true)
+            val items = result.optJSONArray("items") ?: JSONArray()
+            var adItemCount = 0
+            val contentItemIds = listOf("profileme_mine", "100505_-_top8")
+            JsonUtils.removeJSONArrayElements(items) block@{ item ->
+                val itemId = item.optString("itemId") ?: ""
+                if (!contentItemIds.contains(itemId)) {
+                    adItemCount++
+                    return@block true
+                }
+                return@block false
+            }
+            log("removeMinePageAdString2 success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeMinePageAdString2 fail: ${t.getStackInfo()}")
         }
         return string
     }
