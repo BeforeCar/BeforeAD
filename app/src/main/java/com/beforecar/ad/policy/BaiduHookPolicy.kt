@@ -1,15 +1,16 @@
 package com.beforecar.ad.policy
 
 import android.app.Application
-import android.content.Context
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.policy.base.getVersionName
+import com.beforecar.ad.utils.FileUtils
 import com.beforecar.ad.utils.OkHttp
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * @author: wangpan
@@ -31,8 +32,25 @@ class BaiduHookPolicy : AbsHookPolicy() {
         this.versionName = application.getVersionName()
         //hook okhttp BridgeInterceptor
         hookBridgeInterceptor(classLoader)
-        //闪屏页广告
-        removeSplashAd(classLoader)
+        //删除启动页广告文件
+        removeSplashFiles(application)
+    }
+
+    /**
+     * 删除闪屏页广告文件
+     */
+    private fun removeSplashFiles(application: Application) {
+        try {
+            FileUtils.delete(File(application.filesDir, "splash"))
+            FileUtils.delete(File(application.filesDir, "splash_cache"))
+            FileUtils.delete(File(application.filesDir, "splash_collection"))
+            FileUtils.delete(File(application.filesDir, "splash_collection_new"))
+            FileUtils.delete(File(application.filesDir, "splash_preview_new"))
+            FileUtils.delete(File(application.filesDir, "splash_source_new"))
+            log("removeSplashFiles success")
+        } catch (t: Throwable) {
+            log("removeSplashFiles fail: ${t.getStackInfo()}")
+        }
     }
 
     /**
@@ -103,13 +121,22 @@ class BaiduHookPolicy : AbsHookPolicy() {
                                 log("removeVideoDetailRecommendAdItems api success")
                             }
                         }
-                        //splash ad
+                        //启动页广告
                         url.contains("action=update") -> {
-                            log("removeSplashAd api start")
+                            log("removeSplashAd1 api start")
+                            val newResponse = removeSplashAd1(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeSplashAd1 api success")
+                            }
+                        }
+                        //启动页广告
+                        url.contains("ccs/v1/start/confsync") -> {
+                            log("removeSplashAd2 api start")
                             val emptyResponse = OkHttp.createEmptyResponse(response)
                             if (emptyResponse != null) {
                                 param.result = emptyResponse
-                                log("removeSplashAd api success")
+                                log("removeSplashAd2 api success")
                             }
                         }
                         //检测更新
@@ -229,32 +256,6 @@ class BaiduHookPolicy : AbsHookPolicy() {
     }
 
     /**
-     * 热启动的闪屏页广告
-     */
-    private fun removeSplashAd(classLoader: ClassLoader) {
-        try {
-            val nCls = XposedHelpers.findClassIfExists("com.baidu.searchbox.introduction.n", classLoader)
-            if (nCls == null) {
-                log("removeSplashAd cancel")
-                return
-            }
-            log("removeSplashAd start")
-            val methodName = when (versionName) {
-                "12.14.5.10" -> "na"
-                else -> "ng"
-            }
-            XposedHelpers.findAndHookMethod(nCls, methodName, Context::class.java, object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.result = null
-                    log("removeSplashAd success")
-                }
-            })
-        } catch (t: Throwable) {
-            log("removeSplashAd fail: ${t.getStackInfo()}")
-        }
-    }
-
-    /**
      * 新闻详情页推荐广告
      */
     private fun removeDetailRelateAdItems(response: Any): Any? {
@@ -281,6 +282,36 @@ class BaiduHookPolicy : AbsHookPolicy() {
             return result.toString()
         } catch (t: Throwable) {
             log("removeDetailRelateAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 移除启动页广告
+     */
+    private fun removeSplashAd1(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeSplashAd1String(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeSplashAd1 fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeSplashAd1String(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data") ?: return string
+            val splash = data.optJSONObject("splash")
+            if (splash != null) {
+                data.put("splash", "")
+                log("removeSplashAd1String success")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeSplashAd1String fail: ${t.getStackInfo()}")
         }
         return string
     }

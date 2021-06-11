@@ -18,6 +18,7 @@ public class FileUtils {
      */
     public static boolean delete(final File file) {
         if (file == null) return false;
+        if (!file.exists()) return true;
         if (file.isDirectory()) {
             return deleteDir(file);
         }
