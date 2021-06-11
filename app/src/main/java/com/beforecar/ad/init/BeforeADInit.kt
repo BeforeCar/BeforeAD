@@ -33,6 +33,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(XunLeiHookPolicy())
         appPolicies.add(PiPiXiaHookPolicy())
         appPolicies.add(OPPOStoreHookPolicy())
+        appPolicies.add(HeytapMarketHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
