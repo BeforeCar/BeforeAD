@@ -34,6 +34,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(PiPiXiaHookPolicy())
         appPolicies.add(OPPOStoreHookPolicy())
         appPolicies.add(HeytapMarketHookPolicy())
+        appPolicies.add(HeytapThemeHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
