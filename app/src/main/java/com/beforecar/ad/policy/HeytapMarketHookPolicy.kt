@@ -25,36 +25,30 @@ class HeytapMarketHookPolicy : AbsHookPolicy() {
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         //hook BaseNetRequireStore
         hookBaseNetRequireStore(classLoader)
-        //移除 Splash 广告
-        removeSplash(classLoader)
+        //移除启动页广告
+        removeSplashAd(classLoader)
     }
 
     /**
-     * 移除缓存的 splash 广告
+     * 移除启动页广告
      */
-    private fun removeSplash(classLoader: ClassLoader) {
+    private fun removeSplashAd(classLoader: ClassLoader) {
         try {
-            XposedHelpers.findAndHookMethod(
-                "com.nearme.splash.loader.plugin.net.SplashPluginTransaction", classLoader,
-                "requestSplash", String::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        param.result = null
-                        log("removeSplash requestSplash success")
-                    }
+            val splashDtoCls = XposedHelpers.findClass(SplashDto, classLoader)
+            XposedHelpers.findAndHookMethod(splashDtoCls, "getStartTime", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = Long.MAX_VALUE
+                    log("removeSplashAd getStartTime success")
                 }
-            )
-            XposedHelpers.findAndHookMethod(
-                "com.nearme.splash.util.SplashUtil", classLoader,
-                "getCacheSplash", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        param.result = null
-                        log("removeSplash removeCacheSplash success")
-                    }
+            })
+            XposedHelpers.findAndHookMethod(splashDtoCls, "getEndTime", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = Long.MIN_VALUE
+                    log("removeSplashAd getEndTime success")
                 }
-            )
+            })
         } catch (t: Throwable) {
-            log("removeSplash fail: ${t.getStackInfo()}")
+            log("removeSplashAd fail: ${t.getStackInfo()}")
         }
     }
 
@@ -97,6 +91,12 @@ class HeytapMarketHookPolicy : AbsHookPolicy() {
         } catch (t: Throwable) {
             log("hookBaseNetRequireStore fail: ${t.getStackInfo()}")
         }
+    }
+
+    companion object {
+
+        const val SplashDto = "com.heytap.cdo.splash.domain.dto.v2.SplashDto"
+
     }
 
 }
