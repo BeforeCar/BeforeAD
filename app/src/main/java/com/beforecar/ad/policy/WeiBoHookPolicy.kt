@@ -48,9 +48,9 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                     val url = OkHttp.getUrlFromChain(chain)
                     val response = param.result ?: return
                     when {
-                        //关注列表, 推荐列表
+                        //关注列表, 推荐列表, 搜索结果列表
                         url.contains("statuses/unread_friends_timeline")
-                                || url.contains("statuses/unread_hot_timeline") -> {
+                                or url.contains("statuses/unread_hot_timeline") -> {
                             log("removeListAdItems api start")
                             val newResponse = removeListAdItems(response)
                             if (newResponse != null) {
@@ -94,6 +94,15 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                                 log("removeVideoListAdItems api success")
                             }
                         }
+                        //评论列表
+                        url.contains("/comments/build_comments") -> {
+                            log("removeCommentListAdItems api start")
+                            val newResponse = removeCommentListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeCommentListAdItems api success")
+                            }
+                        }
                         //检测更新
                         url.contains("client/version") -> {
                             log("checkUpgrade api start")
@@ -112,12 +121,22 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                                 log("removeMinePageAds api success")
                             }
                         }
+                        //我 tab 页2
                         url.contains("profile/me") -> {
                             log("removeMinePageAds2 api start")
                             val newResponse = removeMinePageAds2(response)
                             if (newResponse != null) {
                                 param.result = newResponse
                                 log("removeMinePageAds2 api success")
+                            }
+                        }
+                        //搜索结果列表页
+                        url.contains("/2/searchall") -> {
+                            log("removeSearchListAdItems api start")
+                            val newResponse = removeSearchListAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeSearchListAdItems api success")
                             }
                         }
                     }
@@ -210,12 +229,12 @@ object WeiBoHookPolicy : AbsHookPolicy() {
             result.put("ad", "")
             val statuses = result.optJSONArray("statuses") ?: JSONArray()
             var adItemCount = 0
-            JsonUtils.removeJSONArrayElements(statuses) { item ->
+            JsonUtils.removeJSONArrayElements(statuses) block@{ item ->
                 val isAdItem = item.optInt("mblogtype") == 1
                 if (isAdItem) {
                     adItemCount++
                 }
-                isAdItem
+                return@block isAdItem
             }
             log("removeListAdString success: $adItemCount")
             return result.toString()
@@ -250,7 +269,7 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                 if (isAdItem) {
                     adItemCount++
                 }
-                isAdItem
+                return@block isAdItem
             }
             log("removeCardListAdString success: $adItemCount")
             return result.toString()
@@ -337,12 +356,47 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                 if (isAdItem) {
                     adItemCount++
                 }
-                isAdItem
+                return@block isAdItem
             }
             log("removeVideoListAdString success: $adItemCount")
             return result.toString()
         } catch (t: Throwable) {
             log("removeVideoListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 评论列表
+     */
+    private fun removeCommentListAdItems(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeCommentListAdItemString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeCommentListAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeCommentListAdItemString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val datas = result.optJSONArray("datas") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(datas) block@{ item ->
+                val data = item.optJSONObject("data") ?: return@block false
+                val isAdItem = data.optInt("mblogtype") == 1
+                if (isAdItem) {
+                    adItemCount++
+                }
+                return@block isAdItem
+            }
+            log("removeCommentListAdItemString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeCommentListAdItemString fail: ${t.getStackInfo()}")
         }
         return string
     }
@@ -440,23 +494,60 @@ object WeiBoHookPolicy : AbsHookPolicy() {
     private fun removeMinePageAdString2(string: String): String {
         try {
             val result = JSONObject(string)
-            //设置没有下一页
-            result.optJSONObject("moreInfo")?.put("noMore", true)
             val items = result.optJSONArray("items") ?: JSONArray()
             var adItemCount = 0
-            val contentItemIds = listOf("profileme_mine", "100505_-_top8")
+            val adItemIds = listOf(
+                "100505_-_newusertask",
+                "100505_-_sinanews2021",
+                "100505_-_newexamination",
+                "100505_-_manage"
+            )
             JsonUtils.removeJSONArrayElements(items) block@{ item ->
-                val itemId = item.optString("itemId") ?: ""
-                if (!contentItemIds.contains(itemId)) {
+                val itemId = item.optString("itemId")
+                val isAdItem = adItemIds.contains(itemId)
+                if (isAdItem) {
                     adItemCount++
-                    return@block true
                 }
-                return@block false
+                return@block isAdItem
             }
             log("removeMinePageAdString2 success: $adItemCount")
             return result.toString()
         } catch (t: Throwable) {
             log("removeMinePageAdString2 fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 搜索结果列表页
+     */
+    private fun removeSearchListAdItems(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeSearchListAdItemString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeSearchListAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeSearchListAdItemString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val cards = result.optJSONArray("cards") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(cards) block@{ item ->
+                val isAdItem = item.optJSONObject("mblog")?.optInt("mblogtype") == 1
+                if (isAdItem) {
+                    adItemCount++
+                }
+                return@block isAdItem
+            }
+            log("removeSearchListAdItemString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeSearchListAdItemString fail: ${t.getStackInfo()}")
         }
         return string
     }
