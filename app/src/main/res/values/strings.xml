@@ -28,5 +28,7 @@
         <item>com.oppo.store</item>
         <item>com.heytap.market</item>
         <item>com.heytap.themestore</item>
+        <item>com.coolapk.market</item>
+        <item>com.taobao.idlefish</item>
     </string-array>
 </resources>
