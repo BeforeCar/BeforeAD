@@ -60,7 +60,6 @@ class IdleFishHookPolicy : AbsHookPolicy() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val realCall = param.thisObject as Any
                         val url = getOkHttpHelper().getUrl(realCall)
-                        log("url: $url")
                         when {
                             //启动页广告
                             url.contains("/start/rt")
