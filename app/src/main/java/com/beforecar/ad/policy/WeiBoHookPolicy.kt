@@ -500,7 +500,8 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                 "100505_-_newusertask",
                 "100505_-_sinanews2021",
                 "100505_-_newexamination",
-                "100505_-_manage"
+                "100505_-_manage",
+                "100505_-_mianliuliang"
             )
             JsonUtils.removeJSONArrayElements(items) block@{ item ->
                 val itemId = item.optString("itemId")
