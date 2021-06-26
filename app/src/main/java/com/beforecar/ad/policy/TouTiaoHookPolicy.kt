@@ -5,10 +5,12 @@ import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.utils.FileUtils
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.lang.reflect.Method
 
 /**
  * @author: wangpan
@@ -16,6 +18,15 @@ import java.io.File
  * @date: 2021/5/8
  */
 class TouTiaoHookPolicy : AbsHookPolicy() {
+
+    companion object {
+
+        const val CallServerInterceptor = "com.bytedance.retrofit2.CallServerInterceptor"
+        const val Response = "com.bytedance.retrofit2.client.Response"
+        const val SsResponse = "com.bytedance.retrofit2.SsResponse"
+        const val TypedByteArray = "com.bytedance.retrofit2.mime.TypedByteArray"
+
+    }
 
     override val tag: String = "tag_toutiao"
 
@@ -50,76 +61,96 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         }
     }
 
-    private fun hookCallServerInterceptor(classLoader: ClassLoader) {
+    private fun findParseResponseMethod(classLoader: ClassLoader): Method? {
         try {
-            val interceptorCls = XposedHelpers.findClass("com.bytedance.retrofit2.CallServerInterceptor", classLoader)
-            val responseCls = XposedHelpers.findClass("com.bytedance.retrofit2.client.Response", classLoader)
-            val jCls = XposedHelpers.findClass("com.bytedance.retrofit2.j", classLoader)
-            XposedHelpers.findAndHookMethod(
-                interceptorCls, "parseResponse", responseCls, jCls, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val response = param.args[0] ?: return
-                        val body = getBodyFromResponse(response)
-                        val url = getUrlFromResponse(response)
-                        if (body == null || url.isEmpty()) {
-                            return
-                        }
-                        when {
-                            //推荐列表
-                            url.contains("api/news/feed/v88/") -> {
-                                removeFeedListAdItems(body)
-                            }
-                            //检查更新
-                            url.contains("check_version/") -> {
-                                disableUpgrade(body)
-                            }
-                            //PostInnerFeedActivity
-                            url.contains("api/feed/thread_aggr/v1/") -> {
-                                removePostInnerFeedAdItems(body)
-                            }
-                            //视频详情页播放完后的广告
-                            url.contains("api/ad/post_patch/v1") -> {
-                                removeVideoAdItems(body)
-                            }
-                            //启动页广告
-                            url.contains("api/ad/splash/news_article/v14") -> {
-                                removeSplashAdItems(body)
-                            }
-                            //小程序推荐
-                            url.contains("tfe/route/micro_recommend/list/v1") -> {
-                                removeMicroRecommendItems(body)
-                            }
-                        }
-                    }
+            val interceptorCls = XposedHelpers.findClass(CallServerInterceptor, classLoader)
+            val ssResponseCls = XposedHelpers.findClass(SsResponse, classLoader)
+            val responseCls = XposedHelpers.findClass(Response, classLoader)
+            for (method in interceptorCls.declaredMethods) {
+                if (method.returnType != ssResponseCls) {
+                    continue
+                }
+                val parameterTypes = method.parameterTypes
+                if (parameterTypes.size == 2 && parameterTypes[0] == responseCls) {
+                    log("findParseResponseMethod success: $method")
+                    return method
+                }
+            }
+        } catch (t: Throwable) {
+            log("findParseResponseMethod fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
 
-                    private fun getBodyFromResponse(response: Any): Any? {
-                        try {
-                            val bodyClass = XposedHelpers.findClass(
-                                "com.bytedance.retrofit2.mime.TypedByteArray",
-                                response.javaClass.classLoader
-                            )
-                            val body = XposedHelpers.callMethod(response, "getBody")
-                            if (body != null && bodyClass == body.javaClass) {
-                                return body
-                            }
-                        } catch (t: Throwable) {
-                            log("getBodyFromResponse fail: ${t.getStackInfo()}")
-                        }
-                        return null
-                    }
+    private fun hookCallServerInterceptor(classLoader: ClassLoader) {
+        val parseResponseMethod = findParseResponseMethod(classLoader)
+        if (parseResponseMethod == null) {
+            log("hookCallServerInterceptor cancel: parseResponseMethod is null")
+            return
+        }
 
-                    private fun getUrlFromResponse(response: Any): String {
-                        return try {
-                            return XposedHelpers.callMethod(response, "getUrl") as? String ?: ""
-                        } catch (t: Throwable) {
-                            log("getUrlFromResponse fail: ${t.getStackInfo()}")
-                            ""
+        try {
+            XposedBridge.hookMethod(parseResponseMethod, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val response = param.args[0] ?: return
+                    val body = getBodyFromResponse(response)
+                    val url = getUrlFromResponse(response)
+                    if (body == null || url.isEmpty()) {
+                        return
+                    }
+                    when {
+                        //推荐列表
+                        url.contains("api/news/feed/v88/") -> {
+                            removeFeedListAdItems(body)
+                        }
+                        //检查更新
+                        url.contains("check_version/") -> {
+                            disableUpgrade(body)
+                        }
+                        //PostInnerFeedActivity
+                        url.contains("api/feed/thread_aggr/v1/") -> {
+                            removePostInnerFeedAdItems(body)
+                        }
+                        //视频详情页播放完后的广告
+                        url.contains("api/ad/post_patch/v1") -> {
+                            removeVideoAdItems(body)
+                        }
+                        //启动页广告
+                        url.contains("api/ad/splash/news_article/v14") -> {
+                            removeSplashAdItems(body)
+                        }
+                        //小程序推荐
+                        url.contains("tfe/route/micro_recommend/list/v1") -> {
+                            removeMicroRecommendItems(body)
                         }
                     }
                 }
-            )
+            })
         } catch (t: Throwable) {
             log("hookCallServerInterceptor fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun getBodyFromResponse(response: Any): Any? {
+        try {
+            val classLoader = response.javaClass.classLoader!!
+            val bodyClass = XposedHelpers.findClass(TypedByteArray, classLoader)
+            val body = XposedHelpers.callMethod(response, "getBody")
+            if (body != null && bodyClass == body.javaClass) {
+                return body
+            }
+        } catch (t: Throwable) {
+            log("getBodyFromResponse fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun getUrlFromResponse(response: Any): String {
+        return try {
+            return XposedHelpers.callMethod(response, "getUrl") as? String ?: ""
+        } catch (t: Throwable) {
+            log("getUrlFromResponse fail: ${t.getStackInfo()}")
+            ""
         }
     }
 
@@ -195,7 +226,7 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
             val result = JSONObject(string)
             val data = result.optJSONArray("data") ?: return string
             var adItemCount = 0
-            val adTypes = listOf(48, 49, 1860)
+            val adTypes = listOf(48, 1860)
             for (index in 0 until data.length()) {
                 val item = data.optJSONObject(index)
                 val content = JSONObject(item.optString("content"))
