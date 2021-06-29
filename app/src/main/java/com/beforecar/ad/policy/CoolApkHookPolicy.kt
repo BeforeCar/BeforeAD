@@ -2,12 +2,16 @@ package com.beforecar.ad.policy
 
 import android.app.Application
 import android.content.Context
+import com.beforecar.ad.okhttp.OkHttpHelper
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getProcessName
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.io.IOException
+import java.lang.reflect.Method
 
 /**
  * @author: wangpan
@@ -26,56 +30,114 @@ class CoolApkHookPolicy : AbsHookPolicy() {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         super.handleLoadPackage(lpparam)
-        hookMyWrapperProxyApplication(lpparam.classLoader!!)
-    }
-
-    private fun hookMyWrapperProxyApplication(classLoader: ClassLoader) {
-        try {
-            val appCls = XposedHelpers.findClass(MyWrapperProxyApplication, classLoader)
-            XposedHelpers.findAndHookMethod(
-                appCls, "initProxyApplication", Context::class.java, object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val application = param.thisObject as Application
-                        hookCoolMarketApplication(application.classLoader!!)
-                    }
-                }
-            )
-        } catch (t: Throwable) {
-            log("hookMyWrapperProxyApplication fail: ${t.getStackInfo()}")
+        if (lpparam.processName == lpparam.packageName) {
+            hookCoolMarketApplication()
         }
     }
 
-    private fun hookCoolMarketApplication(classLoader: ClassLoader) {
+    private fun hookCoolMarketApplication() {
         try {
-            val appCls = XposedHelpers.findClass(CoolMarketApplication, classLoader)
-            XposedHelpers.findAndHookMethod(appCls, "onCreate", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    val application = param.thisObject as Application
-                    onCoolMarketApplicationCreate(application, application.classLoader!!)
+            XposedHelpers.findAndHookMethod(
+                Application::class.java, "onCreate", object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val application = param.thisObject as Application
+                        if (application.javaClass.name == CoolMarketApplication) {
+                            onCoolMarketApplicationCreate(application, application.classLoader!!)
+                        }
+                    }
                 }
-            })
+            )
         } catch (t: Throwable) {
             log("hookCoolMarketApplication fail: ${t.getStackInfo()}")
         }
     }
 
     private fun onCoolMarketApplicationCreate(application: Application, classLoader: ClassLoader) {
-        if (application.getProcessName() != getPackageName()) return
+        if (application.getProcessName() == getPackageName()) {
+            onMainApplicationCreate(application, classLoader)
+        } else {
+            onMinorApplicationCreate(application, classLoader)
+        }
+    }
+
+
+    private fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
+        log("onMainApplicationCreate")
+        //hook OkHttpCall
+        hookOkHttpCall(classLoader)
         //hook 穿山甲 SDK
         hookTTAdSdk(classLoader)
         //hook 广点通 SDK
         hookGDTAdSDK(classLoader)
     }
 
+    private fun onMinorApplicationCreate(application: Application, classLoader: ClassLoader) {
+        //no op
+    }
+
     /**
-     * hook 今日头条穿山甲 SDK
+     * hook OkHttpCall
+     */
+    private fun hookOkHttpCall(classLoader: ClassLoader) {
+        try {
+            val parseResponseMethod = findParseResponseMethod(classLoader)
+            if (parseResponseMethod == null) {
+                log("hookOkHttpCall cancel: parseResponseMethod is null")
+                return
+            }
+            XposedBridge.hookMethod(parseResponseMethod, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val okHttpCall = param.thisObject as Any
+                    val url = getUrlFromOkHttpCall(okHttpCall)
+                    when {
+                        //检测更新
+                        url.contains("v6/apk/checkUpdate") -> {
+                            param.throwable = IOException("disable check update")
+                            log("disableCheckUpdate success")
+                        }
+                    }
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookOkHttpCall fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun getUrlFromOkHttpCall(okHttpCall: Any): String {
+        try {
+            val request = XposedHelpers.callMethod(okHttpCall, "request")
+            return OkHttpHelper.getUrlFromRequest(request)
+        } catch (t: Throwable) {
+            log("getUrlFromOkHttpCall fail: ${t.getStackInfo()}")
+        }
+        return ""
+    }
+
+    private fun findParseResponseMethod(classLoader: ClassLoader): Method? {
+        try {
+            val okHttpCallCls = XposedHelpers.findClass(OkHttpCall, classLoader)
+            val responseCls = XposedHelpers.findClass(Response, classLoader)
+            for (method in okHttpCallCls.declaredMethods) {
+                if (method.name == "parseResponse"
+                    && method.returnType == responseCls
+                ) {
+                    return method
+                }
+            }
+        } catch (t: Throwable) {
+            log("findParseResponseMethod fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    /**
+     * hook 穿山甲 SDK
      */
     private fun hookTTAdSdk(classLoader: ClassLoader) {
         try {
-            val ttAdConfigCls = XposedHelpers.findClass(TTAdConfig, classLoader)
             XposedHelpers.findAndHookMethod(
-                ttAdConfigCls, "setAppId",
-                String::class.java,
+                TTAdConfig, classLoader,
+                "setAppId", String::class.java,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val appId = param.args[0] as String
@@ -89,11 +151,13 @@ class CoolApkHookPolicy : AbsHookPolicy() {
         }
     }
 
+    /**
+     * hook 广点通 SDK
+     */
     private fun hookGDTAdSDK(classLoader: ClassLoader) {
         try {
-            val gdtADManagerCls = XposedHelpers.findClass(GDTADManager, classLoader)
             XposedHelpers.findAndHookMethod(
-                gdtADManagerCls, "initWith",
+                GDTADManager, classLoader, "initWith",
                 Context::class.java, String::class.java,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
@@ -109,13 +173,15 @@ class CoolApkHookPolicy : AbsHookPolicy() {
     }
 
     companion object {
-        const val MyWrapperProxyApplication = "com.coolapk.market.MyWrapperProxyApplication"
         const val CoolMarketApplication = "com.coolapk.market.CoolMarketApplication"
 
-        //穿山甲SDK
+        const val OkHttpCall = "retrofit2.OkHttpCall"
+        const val Response = "retrofit2.Response"
+
+        //穿山甲 SDK
         const val TTAdConfig = "com.bytedance.sdk.openadsdk.TTAdConfig"
 
-        //广点通SDK
+        //广点通 SDK
         const val GDTADManager = "com.qq.e.comm.managers.GDTADManager"
     }
 
