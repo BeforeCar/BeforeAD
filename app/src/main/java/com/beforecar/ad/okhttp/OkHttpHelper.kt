@@ -32,22 +32,6 @@ class OkHttpHelper private constructor(
         return ""
     }
 
-    private fun getUrlFromRequest(request: Any): String {
-        try {
-            val string = request.toString()
-            val startTag = "url="
-            val endTag = ","
-            val startIndex = string.indexOf(startTag)
-            val endIndex = string.indexOf(endTag, startIndex = startIndex + startTag.length)
-            if (startIndex != -1 && endIndex != -1) {
-                return string.substring(startIndex + startTag.length, endIndex)
-            }
-        } catch (t: Throwable) {
-            XposedBridge.log("getUrlFromRequest fail: ${t.getStackInfo()}")
-        }
-        return ""
-    }
-
     companion object {
 
         fun create(
@@ -60,6 +44,22 @@ class OkHttpHelper private constructor(
                 getResponseWithInterceptorChain,
                 getRequest
             )
+        }
+
+        fun getUrlFromRequest(request: Any): String {
+            try {
+                val string = request.toString()
+                val startTag = "url="
+                val endTag = ","
+                val startIndex = string.indexOf(startTag)
+                val endIndex = string.indexOf(endTag, startIndex = startIndex + startTag.length)
+                if (startIndex != -1 && endIndex != -1) {
+                    return string.substring(startIndex + startTag.length, endIndex)
+                }
+            } catch (t: Throwable) {
+                XposedBridge.log("getUrlFromRequest fail: ${t.getStackInfo()}")
+            }
+            return ""
         }
 
     }
