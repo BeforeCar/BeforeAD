@@ -37,6 +37,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(HeytapThemeHookPolicy())
         appPolicies.add(CoolApkHookPolicy())
         appPolicies.add(IdleFishHookPolicy())
+        appPolicies.add(MiPayWalletHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

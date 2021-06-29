@@ -30,5 +30,6 @@
         <item>com.heytap.themestore</item>
         <item>com.coolapk.market</item>
         <item>com.taobao.idlefish</item>
+        <item>com.mipay.wallet</item>
     </string-array>
 </resources>
