@@ -14,6 +14,16 @@ import de.robv.android.xposed.XposedHelpers
  */
 class MIUIMSAHookPolicy : AbsHookPolicy() {
 
+    companion object {
+
+        const val SystemSplashAdService = "com.miui.systemAdSolution.splashAd.SystemSplashAdService"
+        const val ISystemSplashAdService_Stub = "com.miui.systemAdSolution.splashAd.ISystemSplashAdService\$Stub"
+        const val IAdListener = "com.miui.systemAdSolution.splashAd.IAdListener"
+
+        const val SplashUIController = "com.miui.zeus.msa.app.splashad.SplashUIController"
+
+    }
+
     override val tag: String = "tag_msa"
 
     override fun getPackageName(): String {
@@ -21,46 +31,67 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
     }
 
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        removeSplashAd(application, classLoader)
-        removeSplashUI(application, classLoader)
+        hookSystemSplashAdService(classLoader)
+        removeSplashUI(classLoader)
     }
 
     override fun onMinorApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        removeSplashAd(application, classLoader)
-        removeSplashUI(application, classLoader)
+        hookSystemSplashAdService(classLoader)
+        removeSplashUI(classLoader)
+    }
+
+    private fun hookSystemSplashAdService(classLoader: ClassLoader) {
+        try {
+            val serviceCls = XposedHelpers.findClass(SystemSplashAdService, classLoader)
+            XposedHelpers.findAndHookMethod(serviceCls, "onCreate", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val service = param.thisObject as Any
+                    val serviceBinderCls = findSystemSplashAdServiceBinder(service)
+                    log("findSystemSplashAdServiceBinder: $serviceBinderCls")
+                    if (serviceBinderCls != null) {
+                        removeSplashAd(serviceBinderCls, serviceBinderCls.classLoader!!)
+                    }
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookSystemSplashAdService fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun findSystemSplashAdServiceBinder(service: Any): Class<*>? {
+        try {
+            val classLoader = service.javaClass.classLoader!!
+            val serviceCls = XposedHelpers.findClass(SystemSplashAdService, classLoader)
+            val stubCls = XposedHelpers.findClass(ISystemSplashAdService_Stub, classLoader)
+            for (field in serviceCls.declaredFields) {
+                field.isAccessible = true
+                if (field.type == stubCls) {
+                    return field.get(service).javaClass
+                }
+            }
+        } catch (t: Throwable) {
+            log("findSystemSplashAdServiceBinder fail: ${t.getStackInfo()}")
+        }
+        return null
     }
 
     /**
      * 移除闪屏页广告
      */
-    private fun removeSplashAd(application: Application, classLoader: ClassLoader) {
+    private fun removeSplashAd(serviceBinderCls: Class<*>, classLoader: ClassLoader) {
         try {
-            val binderClass = XposedHelpers.findClassIfExists(
-                "com.miui.systemAdSolution.splashAd.SystemSplashAdService\$2", classLoader
-            )
-            val adListenerClass = XposedHelpers.findClassIfExists(
-                "com.miui.systemAdSolution.splashAd.IAdListener", classLoader
-            )
-            if (binderClass == null || adListenerClass == null) {
-                log("removeSplashAd cancel: $binderClass, $adListenerClass")
-                return
-            }
-            log("removeSplashAd start")
+            val adListenerClass = XposedHelpers.findClass(IAdListener, classLoader)
             XposedHelpers.findAndHookMethod(
-                binderClass, "requestSplashAd", String::class.java, adListenerClass,
+                serviceBinderCls, "requestSplashAd", String::class.java, adListenerClass,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val packageName = param.args[0] as String
-                        cancelSplashAd(binderClass, param.thisObject, packageName)
+                        cancelSplashAd(serviceBinderCls, param.thisObject, packageName)
                         param.result = true
                         log("removeSplashAd success: packageName: $packageName")
                     }
 
-                    private fun cancelSplashAd(
-                        binderClass: Class<*>,
-                        binder: Any,
-                        packageName: String
-                    ) {
+                    private fun cancelSplashAd(binderClass: Class<*>, binder: Any, packageName: String) {
                         try {
                             XposedHelpers.findMethodExact(
                                 binderClass, "cancelSplashAd", String::class.java
@@ -77,32 +108,26 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
         }
     }
 
-    private fun removeSplashUI(application: Application, classLoader: ClassLoader) {
+    private fun removeSplashUI(classLoader: ClassLoader) {
         try {
-            val sucClass = XposedHelpers.findClassIfExists(
-                "com.miui.zeus.msa.app.splashad.SplashUIController", classLoader
-            )
-            if (sucClass == null) {
-                log("removeSplashUI cancel: sucClass: $sucClass")
-                return
-            }
-            log("removeSplashUI start")
+            val splashUIControllerCls = XposedHelpers.findClass(SplashUIController, classLoader)
             XposedHelpers.findAndHookMethod(
-                sucClass, "show", String::class.java, String::class.java, object : XC_MethodHook() {
+                splashUIControllerCls, "show", String::class.java, String::class.java,
+                object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        val s1 = param.args[0] as String
-                        val s2 = param.args[1] as String
-                        runOnUIThread { showAfter(param.thisObject) }
+                        val splashUIController = param.thisObject as Any
+                        runOnUIThread { showAfter(splashUIController) }
                         param.result = null
-                        log("removeSplashUI show success: $s1, $s2")
+                        log("removeSplashUI show success")
                     }
 
-                    private fun showAfter(sucObj: Any) {
+                    private fun showAfter(splashUIController: Any) {
                         try {
-                            XposedHelpers.callMethod(sucObj, "notifyViewShown")
-                            XposedHelpers.callMethod(sucClass, "dismissView")
+                            XposedHelpers.callMethod(splashUIController, "notifyViewShown")
+                            XposedHelpers.callMethod(splashUIController, "dismissView")
+                            log("showAfter success")
                         } catch (t: Throwable) {
-                            log("removeSplashUI showAfter success")
+                            log("showAfter fail: ${t.getStackInfo()}")
                         }
                     }
                 }
