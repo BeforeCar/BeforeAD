@@ -68,12 +68,11 @@ abstract class AbsHookPolicy {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val application = param.thisObject as Application
                     val classLoader = application.classLoader!!
+                    onApplicationBeforeCreate(application, classLoader)
                     if (application.getProcessName() == getPackageName()) {
                         mainApplication = application
-                        log("onMainApplicationBeforeCreate: ${getPackageName()}")
                         onMainApplicationBeforeCreate(application, classLoader)
                     } else {
-                        log("onMinorApplicationBeforeCreate: ${getPackageName()}")
                         onMinorApplicationBeforeCreate(application, classLoader)
                     }
                 }
@@ -81,11 +80,10 @@ abstract class AbsHookPolicy {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val application = param.thisObject as Application
                     val classLoader = application.classLoader!!
+                    onApplicationAfterCreate(application, classLoader)
                     if (application.getProcessName() == getPackageName()) {
-                        log("onMainApplicationAfterCreate: ${getPackageName()}")
                         onMainApplicationAfterCreate(application, classLoader)
                     } else {
-                        log("onMinorApplicationAfterCreate: ${getPackageName()}")
                         onMinorApplicationAfterCreate(application, classLoader)
                     }
                 }
@@ -96,9 +94,23 @@ abstract class AbsHookPolicy {
     }
 
     /**
+     * 应用 Application 的 onCreate 之前调用
+     */
+    open fun onApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+
+    }
+
+    /**
      * 应用的主进程 Application 的 onCreate 之前调用
      */
     open fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+
+    }
+
+    /**
+     * 应用 Application 的 onCreate 之后调用
+     */
+    open fun onApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
 
     }
 

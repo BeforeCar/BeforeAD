@@ -21,7 +21,6 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
         const val IAdListener = "com.miui.systemAdSolution.splashAd.IAdListener"
 
         const val SplashUIController = "com.miui.zeus.msa.app.splashad.SplashUIController"
-
     }
 
     override val tag: String = "tag_msa"
@@ -30,26 +29,24 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
         return "com.miui.systemAdSolution"
     }
 
-    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+    override fun onApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
         hookSystemSplashAdService(classLoader)
         removeSplashUI(classLoader)
     }
 
-    override fun onMinorApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        hookSystemSplashAdService(classLoader)
-        removeSplashUI(classLoader)
-    }
-
+    /**
+     * 启动页广告
+     */
     private fun hookSystemSplashAdService(classLoader: ClassLoader) {
         try {
             val serviceCls = XposedHelpers.findClass(SystemSplashAdService, classLoader)
             XposedHelpers.findAndHookMethod(serviceCls, "onCreate", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val service = param.thisObject as Any
-                    val serviceBinderCls = findSystemSplashAdServiceBinder(service)
-                    log("findSystemSplashAdServiceBinder: $serviceBinderCls")
-                    if (serviceBinderCls != null) {
-                        removeSplashAd(serviceBinderCls, serviceBinderCls.classLoader!!)
+                    val binderCls = findSystemSplashAdServiceBinder(service)
+                    log("findSystemSplashAdServiceBinder: $binderCls")
+                    if (binderCls != null) {
+                        removeSplashAd(binderCls, binderCls.classLoader!!)
                     }
                 }
             })
@@ -78,15 +75,15 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
     /**
      * 移除闪屏页广告
      */
-    private fun removeSplashAd(serviceBinderCls: Class<*>, classLoader: ClassLoader) {
+    private fun removeSplashAd(binderCls: Class<*>, classLoader: ClassLoader) {
         try {
             val adListenerClass = XposedHelpers.findClass(IAdListener, classLoader)
             XposedHelpers.findAndHookMethod(
-                serviceBinderCls, "requestSplashAd", String::class.java, adListenerClass,
+                binderCls, "requestSplashAd", String::class.java, adListenerClass,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val packageName = param.args[0] as String
-                        cancelSplashAd(serviceBinderCls, param.thisObject, packageName)
+                        cancelSplashAd(binderCls, param.thisObject, packageName)
                         param.result = true
                         log("removeSplashAd success: packageName: $packageName")
                     }
@@ -110,9 +107,9 @@ class MIUIMSAHookPolicy : AbsHookPolicy() {
 
     private fun removeSplashUI(classLoader: ClassLoader) {
         try {
-            val splashUIControllerCls = XposedHelpers.findClass(SplashUIController, classLoader)
             XposedHelpers.findAndHookMethod(
-                splashUIControllerCls, "show", String::class.java, String::class.java,
+                SplashUIController, classLoader,
+                "show", String::class.java, String::class.java,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val splashUIController = param.thisObject as Any
