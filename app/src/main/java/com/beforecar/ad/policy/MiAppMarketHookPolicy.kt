@@ -1,9 +1,9 @@
 package com.beforecar.ad.policy
 
-import android.app.Activity
 import android.app.Application
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
+import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
 
@@ -31,20 +31,32 @@ class MiAppMarketHookPolicy : AbsHookPolicy() {
      */
     private fun removeSplashAd(classLoader: ClassLoader) {
         try {
-            log("removeSplashAd start")
             XposedHelpers.findAndHookMethod(
-                "com.xiaomi.market.ui.BaseActivity",
-                classLoader, "needShowSplash", Activity::class.java,
+                BaseActivity, classLoader, "needShowSplash",
                 object : XC_MethodReplacement() {
                     override fun replaceHookedMethod(param: MethodHookParam): Any {
-                        log("removeSplashAd success")
+                        log("removeSplashAd needShowSplash success")
                         return false
+                    }
+                }
+            )
+            XposedHelpers.findAndHookMethod(
+                FocusVideoAdManager, classLoader, "getSplashAdInfo",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("removeSplashAd getSplashAdInfo success")
+                        param.result = null
                     }
                 }
             )
         } catch (t: Throwable) {
             log("removeSplashAd fail: ${t.getStackInfo()}")
         }
+    }
+
+    companion object {
+        const val BaseActivity = "com.xiaomi.market.ui.BaseActivity"
+        const val FocusVideoAdManager = "com.xiaomi.market.h52native.FocusVideoAdManager"
     }
 
 }
