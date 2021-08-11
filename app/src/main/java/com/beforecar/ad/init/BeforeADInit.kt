@@ -39,6 +39,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(IdleFishHookPolicy())
         appPolicies.add(MiPayWalletHookPolicy())
         appPolicies.add(BilibiliHookPolicy())
+        appPolicies.add(MiUpdaterHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

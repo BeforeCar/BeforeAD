@@ -32,5 +32,6 @@
         <item>com.taobao.idlefish</item>
         <item>com.mipay.wallet</item>
         <item>tv.danmaku.bili</item>
+        <item>com.android.updater</item>
     </string-array>
 </resources>
