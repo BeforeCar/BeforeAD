@@ -4,7 +4,7 @@ import android.app.Application
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XC_MethodReplacement
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 
 /**
@@ -23,34 +23,57 @@ class MiAppMarketHookPolicy : AbsHookPolicy() {
     }
 
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
-        removeSplashAd(classLoader)
+        hookNeedShowSplash(classLoader)
+        hookGetSplashAdInfo(classLoader)
     }
 
-    /**
-     * 移除启动页广告
-     */
-    private fun removeSplashAd(classLoader: ClassLoader) {
+    private fun hookNeedShowSplash(classLoader: ClassLoader) {
         try {
-            XposedHelpers.findAndHookMethod(
-                BaseActivity, classLoader, "needShowSplash",
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
-                        log("removeSplashAd needShowSplash success")
-                        return false
-                    }
+            val baseActivityCls = XposedHelpers.findClassIfExists(BaseActivity, classLoader)
+            if (baseActivityCls == null) {
+                log("hookNeedShowSplash cancel: BaseActivity class not found")
+                return
+            }
+            val needShowSplashMethod = baseActivityCls.declaredMethods.find {
+                it.name == "needShowSplash"
+            }
+            if (needShowSplashMethod == null) {
+                log("hookNeedShowSplash cancel: needShowSplash method not found")
+                return
+            }
+            XposedBridge.hookMethod(needShowSplashMethod, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = false
+                    log("hookNeedShowSplash success")
                 }
-            )
-            XposedHelpers.findAndHookMethod(
-                FocusVideoAdManager, classLoader, "getSplashAdInfo",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("removeSplashAd getSplashAdInfo success")
-                        param.result = null
-                    }
-                }
-            )
+            })
         } catch (t: Throwable) {
-            log("removeSplashAd fail: ${t.getStackInfo()}")
+            log("hookNeedShowSplash fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun hookGetSplashAdInfo(classLoader: ClassLoader) {
+        try {
+            val adManagerCls = XposedHelpers.findClassIfExists(FocusVideoAdManager, classLoader)
+            if (adManagerCls == null) {
+                log("getSplashAdInfoMethod cancel: FocusVideoAdManager class not found")
+                return
+            }
+            val getSplashAdInfoMethod = adManagerCls.declaredMethods.find {
+                it.name == "getSplashAdInfo"
+            }
+            if (getSplashAdInfoMethod == null) {
+                log("getSplashAdInfoMethod cancel: getSplashAdInfo method not found")
+                return
+            }
+            XposedBridge.hookMethod(getSplashAdInfoMethod, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = null
+                    log("getSplashAdInfoMethod success")
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookGetSplashAdInfo fail: ${t.getStackInfo()}")
         }
     }
 
