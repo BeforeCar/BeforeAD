@@ -21,7 +21,10 @@ class MobileTicketHookPolicy : AbsHookPolicy() {
     }
 
     override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
+        //移除启动页广告
         removeMainPageAd(classLoader)
+
+        //移除首页弹窗广告
         removePopupAd(classLoader)
     }
 
@@ -30,9 +33,8 @@ class MobileTicketHookPolicy : AbsHookPolicy() {
      */
     private fun removeMainPageAd(classLoader: ClassLoader) {
         try {
-            log("removeMainPageAd start")
             XposedHelpers.findAndHookMethod(
-                "com.bontai.mobiads.ads.splash.SplashAdView", classLoader, "isNeedShowAd",
+                BeanAds, classLoader, "haveSplashAd",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         param.result = false
@@ -50,9 +52,8 @@ class MobileTicketHookPolicy : AbsHookPolicy() {
      */
     private fun removePopupAd(classLoader: ClassLoader) {
         try {
-            log("removePopupAd start")
             XposedHelpers.findAndHookMethod(
-                "com.MobileTicket.netrequest.AdPopUpRequest", classLoader, "requestAdPopUp",
+                AdPopUpRequest, classLoader, "requestAdPopUp",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         param.result = null
@@ -63,5 +64,13 @@ class MobileTicketHookPolicy : AbsHookPolicy() {
         } catch (t: Throwable) {
             log("removePopupAd fail: ${t.getStackInfo()}")
         }
+    }
+
+    companion object {
+
+        const val BeanAds = "com.MobileTicket.ads.bean.BeanAds"
+
+        const val AdPopUpRequest = "com.MobileTicket.netrequest.AdPopUpRequest"
+
     }
 }
