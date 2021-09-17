@@ -112,16 +112,20 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
                             removePostInnerFeedAdItems(body)
                         }
                         //视频详情页播放完后的广告
-                        url.contains("api/ad/post_patch/v1") -> {
+                        url.contains("api/ad/post_patch/v1/") -> {
                             removeVideoAdItems(body)
                         }
                         //启动页广告
-                        url.contains("api/ad/splash/news_article/v14") -> {
+                        url.contains("api/ad/splash/news_article/v14/") -> {
                             removeSplashAdItems(body)
                         }
                         //小程序推荐
-                        url.contains("tfe/route/micro_recommend/list/v1") -> {
+                        url.contains("tfe/route/micro_recommend/list/v1/") -> {
                             removeMicroRecommendItems(body)
+                        }
+                        //新闻详情页底部推荐广告
+                        url.contains("article/slow_information/v27/") -> {
+                            removeArticleSlowInformation(body)
                         }
                     }
                 }
@@ -302,6 +306,35 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
             return result.toString()
         } catch (t: Throwable) {
             log("removeSplashAdItemString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 新闻详情页底部推荐广告
+     */
+    private fun removeArticleSlowInformation(body: Any) {
+        try {
+            log("removeArticleSlowInformation start")
+            val string = getBodyString(body)
+            val newString = removeArticleSlowInformationString(string)
+            setBodyString(body, newString)
+        } catch (t: Throwable) {
+            log("removeArticleSlowInformation fail: ${t.getStackInfo()}")
+        }
+    }
+
+    private fun removeArticleSlowInformationString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val data = result.optJSONObject("data")
+            if (data != null) {
+                result.put("data", "")
+                log("removeArticleSlowInformationString success")
+            }
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeArticleSlowInformationString fail: ${t.getStackInfo()}")
         }
         return string
     }
