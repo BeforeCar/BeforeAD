@@ -67,6 +67,15 @@ object WeiBoHookPolicy : AbsHookPolicy() {
                                 log("removeCardListAdItems api success")
                             }
                         }
+                        //推荐列表
+                        url.contains("2/video/community_tab") -> {
+                            log("removeCommunityTabAdItems api start")
+                            val newResponse = removeCommunityTabAdItems(response)
+                            if (newResponse != null) {
+                                param.result = newResponse
+                                log("removeCommunityTabAdItems api success")
+                            }
+                        }
                         //视频详情页
                         url.contains("statuses/video_mixtimeline") -> {
                             log("removeVideoDetailAds api start")
@@ -275,6 +284,41 @@ object WeiBoHookPolicy : AbsHookPolicy() {
             return result.toString()
         } catch (t: Throwable) {
             log("removeCardListAdString fail: ${t.getStackInfo()}")
+        }
+        return string
+    }
+
+    /**
+     * 移除推荐列表广告
+     */
+    private fun removeCommunityTabAdItems(response: Any): Any? {
+        try {
+            val string = OkHttp.getResponseString(response)
+            val newString = removeCommunityTabAdString(string)
+            return OkHttp.createNewResponse(response, newString)
+        } catch (t: Throwable) {
+            log("removeCommunityTabAdItems fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    private fun removeCommunityTabAdString(string: String): String {
+        try {
+            val result = JSONObject(string)
+            val cards = result.optJSONArray("cards") ?: JSONArray()
+            var adItemCount = 0
+            JsonUtils.removeJSONArrayElements(cards) block@{ item ->
+                val mblog = item.optJSONObject("mblog") ?: return@block false
+                val isAdItem = mblog.optInt("mblogtype") == 1
+                if (isAdItem) {
+                    adItemCount++
+                }
+                return@block isAdItem
+            }
+            log("removeCommunityTabAdString success: $adItemCount")
+            return result.toString()
+        } catch (t: Throwable) {
+            log("removeCommunityTabAdString fail: ${t.getStackInfo()}")
         }
         return string
     }
