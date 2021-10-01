@@ -40,6 +40,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(MiPayWalletHookPolicy())
         appPolicies.add(BilibiliHookPolicy())
         appPolicies.add(MiUpdaterHookPolicy())
+        appPolicies.add(MIUISecurityCenterHookPolicy)
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
