@@ -32,6 +32,19 @@ class BiqugeHookPolicy : AbsHookPolicy() {
                 }
             }
         )
+        XposedHelpers.findAndHookMethod(
+            "com.biquge.ebook.app.bean.User",
+            classLoader,
+            "isNoAd",
+            object : XC_MethodHook() {
+
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    super.beforeHookedMethod(param)
+                    param?.result = true
+                    log("isNoAd: 强行返回无广告")
+                }
+            }
+        )
     }
 
     override fun getPackageName(): String {
