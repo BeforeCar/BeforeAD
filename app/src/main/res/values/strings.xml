@@ -14,10 +14,11 @@
         <item>com.beforecar.ad</item>
         <item>cmccwm.mobilemusic</item>
         <item>com.miui.systemAdSolution</item>
-        <item>com.xiaomi.market</item>
+<!--        <item>com.xiaomi.market</item>-->
         <item>com.miui.securitycenter</item>
         <item>com.kelaode.kuaidgebq.orange</item>
         <item>fengchedongman.apps.com</item>
+        <item>com.android.updater</item>
 
         <!--        <item>com.xiaomi.shop</item>-->
         <!--        <item>com.sina.weibo</item>-->
@@ -36,6 +37,5 @@
         <!--        <item>com.taobao.idlefish</item>-->
         <!--        <item>com.mipay.wallet</item>-->
         <!--        <item>tv.danmaku.bili</item>-->
-        <!--        <item>com.android.updater</item>-->
     </string-array>
 </resources>
