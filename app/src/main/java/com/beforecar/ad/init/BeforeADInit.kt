@@ -43,6 +43,8 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(MIUISecurityCenterHookPolicy)
         appPolicies.add(BiqugeHookPolicy())
         appPolicies.add(FengCheCartoonHookPolicy())
+        appPolicies.add(DrmfabHookPolicy())
+        appPolicies.add(HlgysHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
