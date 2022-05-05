@@ -29,6 +29,28 @@ class HlgysHookPolicy : AbsHookPolicy() {
                 }
             }
         )
+
+        XposedHelpers.findAndHookMethod(
+            "com.junyue.repository.config.ConfigBean",
+            classLoader,
+            "S",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = true
+                }
+            }
+        )
+
+        XposedHelpers.findAndHookMethod(
+            "com.junyue.repository.config.ConfigBean",
+            classLoader,
+            "K",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = true
+                }
+            }
+        )
     }
 
     override fun getPackageName(): String {
