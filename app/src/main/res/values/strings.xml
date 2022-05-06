@@ -14,10 +14,14 @@
         <item>com.beforecar.ad</item>
         <item>cmccwm.mobilemusic</item>
         <item>com.miui.systemAdSolution</item>
-<!--        <item>com.xiaomi.market</item>-->
+        <item>com.xiaomi.market</item>
         <item>com.miui.securitycenter</item>
         <item>com.kelaode.kuaidgebq.orange</item>
         <item>fengchedongman.apps.com</item>
+        <item>com.drmfab.sks.phoneplayer.debug</item>
+        <item>com.jingdong.app.mall</item>
+        <item>com.android.updater</item>
+        <item>com.hlgys.hlg</item>
         <item>com.android.updater</item>
 
         <!--        <item>com.xiaomi.shop</item>-->
@@ -27,7 +31,6 @@
         <!--        <item>com.xiaomi.smarthome</item>-->
         <!--        <item>com.baidu.searchbox</item>-->
         <!--        <item>com.ss.android.article.news</item>-->
-        <!--        <item>com.jingdong.app.mall</item>-->
         <!--        <item>com.xunlei.downloadprovider</item>-->
         <!--        <item>com.sup.android.superb</item>-->
         <!--        <item>com.oppo.store</item>-->
