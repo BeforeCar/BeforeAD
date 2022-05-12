@@ -45,6 +45,43 @@ class BiqugeHookPolicy : AbsHookPolicy() {
                 }
             }
         )
+        XposedHelpers.findAndHookMethod(
+            "org.json.JSONObject",
+            classLoader,
+            "optBoolean",
+            String::class.java,
+            object : XC_MethodHook() {
+
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    log("optBoolean key: ${param?.args?.get(0)}")
+                    if (param?.args?.get(0) ?: "" == "topmsg_close") {
+                        param?.result = true
+                    }
+                }
+            }
+        )
+        XposedHelpers.findAndHookMethod(
+            "d.c.a.a.c.i",
+            classLoader,
+            "u0",
+            object : XC_MethodHook() {
+
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    param?.result = null
+                }
+            }
+        )
+        XposedHelpers.findAndHookMethod(
+            "d.c.a.a.c.i",
+            classLoader,
+            "U0",
+            object : XC_MethodHook() {
+
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    param?.result = null
+                }
+            }
+        )
     }
 
     override fun getPackageName(): String {
