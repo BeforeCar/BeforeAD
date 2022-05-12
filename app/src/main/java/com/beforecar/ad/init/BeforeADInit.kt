@@ -2,6 +2,8 @@ package com.beforecar.ad.init
 
 import com.beforecar.ad.policy.*
 import com.beforecar.ad.policy.base.AbsHookPolicy
+import com.beforecar.ad.policy.douyin.DouyinHookPolicy
+import com.beforecar.ad.policy.hlgys.HlgysHookPolicy
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
@@ -45,6 +47,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(FengCheCartoonHookPolicy())
         appPolicies.add(DrmfabHookPolicy())
         appPolicies.add(HlgysHookPolicy())
+        appPolicies.add(DouyinHookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
