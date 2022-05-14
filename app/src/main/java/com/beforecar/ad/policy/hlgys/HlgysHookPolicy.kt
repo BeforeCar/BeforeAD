@@ -3,7 +3,9 @@ package com.beforecar.ad.policy.hlgys
 import android.app.Application
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import java.lang.reflect.Method
 
 
 class HlgysHookPolicy : AbsHookPolicy() {
@@ -11,9 +13,9 @@ class HlgysHookPolicy : AbsHookPolicy() {
     override val tag: String
         get() = "HlgysHookPolicy"
 
-    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        super.onMainApplicationBeforeCreate(application, classLoader)
-        log("onFirstValidActivityPreOnCreate")
+    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
+        super.onMainApplicationAfterCreate(application, classLoader)
+        log("onMainApplicationAfterCreate")
         val l = XposedHelpers.findClass("h.d0.c.l", classLoader)
         //强制去掉广告
         XposedHelpers.findAndHookMethod(
@@ -25,7 +27,6 @@ class HlgysHookPolicy : AbsHookPolicy() {
             Boolean::class.java,
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    log("params:" + param.args[0])
                     param.result = false
                 }
             }
@@ -53,17 +54,17 @@ class HlgysHookPolicy : AbsHookPolicy() {
             }
         )
         //打印host链接
-        XposedHelpers.findAndHookMethod(
-            "d.g.d.b.d.a",
-            classLoader,
-            "u2",
-            String::class.java,
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    log("host-url:${param.args[0]}")
-                }
-            }
-        )
+//        XposedHelpers.findAndHookMethod(
+//            "d.g.d.b.d.a",
+//            classLoader,
+//            "u2",
+//            String::class.java,
+//            object : XC_MethodHook() {
+//                override fun beforeHookedMethod(param: MethodHookParam) {
+//                    log("host-url:${param.args[0]}")
+//                }
+//            }
+//        )
         //强制去掉 no_proxy
         XposedHelpers.findAndHookMethod(
             "d.g.d.c.c",
@@ -88,20 +89,117 @@ class HlgysHookPolicy : AbsHookPolicy() {
 
             }
         )
-        XposedHelpers.findAndHookMethod(
-            "com.junyue.bean2.VideoEpisode",
-            classLoader,
-            "b",
-            object : XC_MethodHook() {
 
-                override fun afterHookedMethod(param: MethodHookParam?) {
-                    super.afterHookedMethod(param)
-                    log("result:${param?.result}")
+        //打开 HttpConnection 的抓包开关
+        XposedHelpers.findAndHookMethod(
+            "java.net.URL",
+            classLoader,
+            "openConnection",
+            XposedHelpers.findClass("java.net.Proxy", classLoader),
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    param?.result = XposedHelpers.callMethod(param?.thisObject, "openConnection")
                 }
             }
         )
 
+        //hook simpleClient 不要设置为 No_proxy，将 Builder 直接初始化返回
+        XposedHelpers.findAndHookMethod(
+            "c.a.b.h.a",
+            classLoader,
+            "b",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    val builderCls = XposedHelpers.findClass("okhttp3.OkHttpClient.b", classLoader)
+                    val newBuilder = builderCls.getDeclaredConstructor().also {
+                        it.isAccessible = true
+                    }.newInstance()
+                    param?.result = newBuilder
+                }
+            }
+        )
 
+        XposedHelpers.findAndHookMethod(
+            "com.dueeeke.videoplayer.player.VideoView",
+            classLoader,
+            "setUrl",
+            String::class.java,
+            Map::class.java,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+//                    super.beforeHookedMethod(param)
+                    log("setUrl:${param?.args?.get(0)}")
+                    printStackInfo()
+                }
+            }
+        )
+        XposedHelpers.findAndHookMethod(
+            "cn.fxlcy.anative.Native",
+            classLoader,
+            "a",
+            String::class.java,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    super.beforeHookedMethod(param)
+                    log("加密内容:${param?.args?.get(0)}")
+                }
+            }
+        )
+//        XposedHelpers.findAndHookMethod(
+//            "cn.fxlcy.anative.Native",
+//            classLoader,
+//            "c",
+//            object : XC_MethodHook() {
+//                override fun afterHookedMethod(param: MethodHookParam?) {
+//                    super.afterHookedMethod(param)
+//                    log("cn.fxlcy.anative.Native-c:${param?.result}")
+//                }
+//            }
+//        )
+//
+//        XposedHelpers.findAndHookMethod(
+//            "cn.fxlcy.anative.Native",
+//            classLoader,
+//            "b",
+//            object : XC_MethodHook() {
+//                override fun afterHookedMethod(param: MethodHookParam?) {
+//                    super.afterHookedMethod(param)
+//                    log("cn.fxlcy.anative.Native-b:${param?.result}")
+//                }
+//            }
+//        )
+
+
+//        XposedHelpers.findAndHookMethod(
+//            "android.util.Base64",
+//            classLoader,
+//            "encodeToString",
+//            ByteArray::class.java,
+//            Int::class.java,
+//            object : XC_MethodHook() {
+//                override fun afterHookedMethod(param: MethodHookParam?) {
+//                    super.afterHookedMethod(param)
+//                    log("base64-encodeToString-:${param?.result}")
+//                    printStackInfo()
+//                }
+//            }
+//        )
+
+        findHttpServerLogMethod(classLoader).forEach {
+            XposedBridge.hookMethod(it, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+//                    super.beforeHookedMethod(param)
+                    log("HttpServerLog-${it.name}:${param?.args?.get(0)}")
+                }
+            })
+        }
+
+
+    }
+
+    private fun findHttpServerLogMethod(classLoader: ClassLoader): List<Method> {
+        val interceptorCls = XposedHelpers.findClass("c.a.b.o.t", classLoader)
+        return interceptorCls.declaredMethods.asList()
     }
 
     override fun getPackageName(): String {
