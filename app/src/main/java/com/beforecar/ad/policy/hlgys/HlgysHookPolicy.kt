@@ -1,10 +1,13 @@
 package com.beforecar.ad.policy.hlgys
 
+import android.app.Activity
 import android.app.Application
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.io.IOException
 import java.lang.reflect.Method
 
 
@@ -13,9 +16,14 @@ class HlgysHookPolicy : AbsHookPolicy() {
     override val tag: String
         get() = "HlgysHookPolicy"
 
-    override fun onMainApplicationAfterCreate(application: Application, classLoader: ClassLoader) {
-        super.onMainApplicationAfterCreate(application, classLoader)
-        log("onMainApplicationAfterCreate")
+    override fun onFirstValidActivityPreOnCreate(
+        lpparam: XC_LoadPackage.LoadPackageParam,
+        application: Application,
+        activity: Activity,
+        classLoader: ClassLoader
+    ) {
+        super.onFirstValidActivityPreOnCreate(lpparam, application, activity, classLoader)
+        log("onFirstValidActivityPreOnCreate")
         val l = XposedHelpers.findClass("h.d0.c.l", classLoader)
         //强制去掉广告
         XposedHelpers.findAndHookMethod(
@@ -145,6 +153,46 @@ class HlgysHookPolicy : AbsHookPolicy() {
                 }
             }
         )
+
+        //将弹窗设置为可以关闭
+        XposedHelpers.findAndHookMethod(
+            "android.app.Dialog",
+            classLoader,
+            "setCancelable",
+            Boolean::class.java,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    param?.args?.set(0, true)
+                    super.beforeHookedMethod(param)
+                }
+            }
+        )
+
+        //将弹窗设置为可以关闭
+        XposedHelpers.findAndHookMethod(
+            "android.app.Dialog",
+            classLoader,
+            "setCanceledOnTouchOutside",
+            Boolean::class.java,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    param?.args?.set(0, true)
+                    super.beforeHookedMethod(param)
+                }
+            }
+        )
+
+        //去除检测更新
+        hookOkHttpCall(classLoader) { param, url ->
+            when {
+                //检测更新
+                url?.contains("checkupdate") == true -> {
+                    param.throwable = IOException("disable check update")
+                    log("disableCheckUpdate success")
+                }
+            }
+        }
+
 //        XposedHelpers.findAndHookMethod(
 //            "cn.fxlcy.anative.Native",
 //            classLoader,

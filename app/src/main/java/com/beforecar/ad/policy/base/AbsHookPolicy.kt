@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.CallSuper
+import com.beforecar.ad.okhttp.OkHttpHelper
+import com.beforecar.ad.policy.CoolApkHookPolicy
 import com.beforecar.ad.utils.AppLogHelper
 import com.beforecar.ad.utils.AppUtils.isAssignableFromKt
 import de.robv.android.xposed.XC_MethodHook
@@ -48,7 +50,10 @@ abstract class AbsHookPolicy {
     /**
      * 获取 application 的 onCreate 方法
      */
-    private fun findApplicationOnCreateMethod(appClassName: String, classLoader: ClassLoader): Method {
+    private fun findApplicationOnCreateMethod(
+        appClassName: String,
+        classLoader: ClassLoader
+    ): Method {
         var appClass = XposedHelpers.findClass(appClassName, classLoader)
         var onCreateMethod: Method? = XposedHelpers.findMethodExactIfExists(appClass, "onCreate")
         var superClass: Class<*>? = appClass.superclass
@@ -57,7 +62,8 @@ abstract class AbsHookPolicy {
             onCreateMethod = XposedHelpers.findMethodExactIfExists(appClass, "onCreate")
             superClass = appClass.superclass
         }
-        return onCreateMethod ?: throw NoSuchMethodException("onCreate method not found: $appClassName")
+        return onCreateMethod
+            ?: throw NoSuchMethodException("onCreate method not found: $appClassName")
     }
 
     private fun callApplicationCreate(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -277,6 +283,60 @@ abstract class AbsHookPolicy {
         runOnUIThread {
             Toast.makeText(context, msg, duration).show()
         }
+    }
+
+    fun findParseResponseMethod(classLoader: ClassLoader): Method? {
+        try {
+            val okHttpCallCls = XposedHelpers.findClass(CoolApkHookPolicy.OkHttpCall, classLoader)
+            val responseCls = XposedHelpers.findClass(CoolApkHookPolicy.Response, classLoader)
+            for (method in okHttpCallCls.declaredMethods) {
+                if (method.name == "parseResponse"
+                    && method.returnType == responseCls
+                ) {
+                    return method
+                }
+            }
+        } catch (t: Throwable) {
+            log("findParseResponseMethod fail: ${t.getStackInfo()}")
+        }
+        return null
+    }
+
+    fun hookOkHttpCall(
+        classLoader: ClassLoader,
+        beforeHookedMethod: (param: XC_MethodHook.MethodHookParam, url: String?) -> Unit
+    ) {
+        try {
+            val parseResponseMethod = findParseResponseMethod(classLoader)
+            if (parseResponseMethod == null) {
+                log("hookOkHttpCall cancel: parseResponseMethod is null")
+                return
+            }
+            XposedBridge.hookMethod(parseResponseMethod, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val okHttpCall = param.thisObject as Any
+                    val url = getUrlFromOkHttpCall(okHttpCall)
+                    beforeHookedMethod.invoke(param, url)
+                }
+            })
+        } catch (t: Throwable) {
+            log("hookOkHttpCall fail: ${t.getStackInfo()}")
+        }
+    }
+
+    fun getUrlFromOkHttpCall(okHttpCall: Any): String {
+        try {
+            val request = XposedHelpers.callMethod(okHttpCall, "request")
+            return OkHttpHelper.getUrlFromRequest(request)
+        } catch (t: Throwable) {
+            log("getUrlFromOkHttpCall fail: ${t.getStackInfo()}")
+        }
+        return ""
+    }
+
+    companion object {
+        const val OkHttpCall = "retrofit2.OkHttpCall"
+        const val Response = "retrofit2.Response"
     }
 
 }

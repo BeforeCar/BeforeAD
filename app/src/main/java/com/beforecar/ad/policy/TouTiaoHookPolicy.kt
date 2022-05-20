@@ -61,7 +61,7 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
         }
     }
 
-    private fun findParseResponseMethod(classLoader: ClassLoader): Method? {
+    private fun findParseResponseMethodForBytedance(classLoader: ClassLoader): Method? {
         try {
             val interceptorCls = XposedHelpers.findClass(CallServerInterceptor, classLoader)
             val ssResponseCls = XposedHelpers.findClass(SsResponse, classLoader)
@@ -83,7 +83,7 @@ class TouTiaoHookPolicy : AbsHookPolicy() {
     }
 
     private fun hookCallServerInterceptor(classLoader: ClassLoader) {
-        val parseResponseMethod = findParseResponseMethod(classLoader)
+        val parseResponseMethod = findParseResponseMethodForBytedance(classLoader)
         if (parseResponseMethod == null) {
             log("hookCallServerInterceptor cancel: parseResponseMethod is null")
             return

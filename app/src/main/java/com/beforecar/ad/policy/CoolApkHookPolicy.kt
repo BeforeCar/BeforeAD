@@ -2,7 +2,6 @@ package com.beforecar.ad.policy
 
 import android.app.Application
 import android.content.Context
-import com.beforecar.ad.okhttp.OkHttpHelper
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getProcessName
 import com.beforecar.ad.policy.base.getStackInfo
@@ -11,7 +10,6 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.io.IOException
-import java.lang.reflect.Method
 
 /**
  * @author: wangpan
@@ -64,7 +62,16 @@ class CoolApkHookPolicy : AbsHookPolicy() {
     private fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
         log("onMainApplicationCreate")
         //hook OkHttpCall
-        hookOkHttpCall(classLoader)
+        hookOkHttpCall(classLoader) { param, url ->
+            when {
+                //检测更新
+                url?.contains("v6/apk/checkUpdate") == true -> {
+                    param.throwable = IOException("disable check update")
+                    log("disableCheckUpdate success")
+                }
+            }
+        }
+//        hookOkHttpCall(classLoader)
         //hook 穿山甲 SDK
         hookTTAdSdk(classLoader)
         //hook 广点通 SDK
@@ -101,33 +108,6 @@ class CoolApkHookPolicy : AbsHookPolicy() {
         } catch (t: Throwable) {
             log("hookOkHttpCall fail: ${t.getStackInfo()}")
         }
-    }
-
-    private fun getUrlFromOkHttpCall(okHttpCall: Any): String {
-        try {
-            val request = XposedHelpers.callMethod(okHttpCall, "request")
-            return OkHttpHelper.getUrlFromRequest(request)
-        } catch (t: Throwable) {
-            log("getUrlFromOkHttpCall fail: ${t.getStackInfo()}")
-        }
-        return ""
-    }
-
-    private fun findParseResponseMethod(classLoader: ClassLoader): Method? {
-        try {
-            val okHttpCallCls = XposedHelpers.findClass(OkHttpCall, classLoader)
-            val responseCls = XposedHelpers.findClass(Response, classLoader)
-            for (method in okHttpCallCls.declaredMethods) {
-                if (method.name == "parseResponse"
-                    && method.returnType == responseCls
-                ) {
-                    return method
-                }
-            }
-        } catch (t: Throwable) {
-            log("findParseResponseMethod fail: ${t.getStackInfo()}")
-        }
-        return null
     }
 
     /**
