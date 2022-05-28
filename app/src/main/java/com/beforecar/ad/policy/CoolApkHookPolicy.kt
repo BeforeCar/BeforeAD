@@ -62,7 +62,7 @@ class CoolApkHookPolicy : AbsHookPolicy() {
     private fun onMainApplicationCreate(application: Application, classLoader: ClassLoader) {
         log("onMainApplicationCreate")
         //hook OkHttpCall
-        hookOkHttpCall(classLoader) { param, url ->
+        hookOkHttpCall(classLoader, beforeHookedMethod = { param, url ->
             when {
                 //检测更新
                 url?.contains("v6/apk/checkUpdate") == true -> {
@@ -70,7 +70,7 @@ class CoolApkHookPolicy : AbsHookPolicy() {
                     log("disableCheckUpdate success")
                 }
             }
-        }
+        })
 //        hookOkHttpCall(classLoader)
         //hook 穿山甲 SDK
         hookTTAdSdk(classLoader)

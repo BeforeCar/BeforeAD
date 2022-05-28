@@ -32,7 +32,6 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(BaiduHookPolicy())
         appPolicies.add(TouTiaoHookPolicy())
         appPolicies.add(JDHookPolicy)
-        appPolicies.add(XunLeiHookPolicy())
         appPolicies.add(PiPiXiaHookPolicy())
         appPolicies.add(OPPOStoreHookPolicy())
         appPolicies.add(HeytapMarketHookPolicy())

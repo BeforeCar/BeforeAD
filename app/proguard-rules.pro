@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+#必须将xposed模块的入口类排除，否则xposed找不到入口，会导致模块不生效
+-keep class com.beforecar.ad.init.BeforeADInit { *; }

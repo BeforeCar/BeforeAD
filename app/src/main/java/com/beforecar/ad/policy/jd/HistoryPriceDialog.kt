@@ -18,15 +18,16 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.ProgressBar
-import androidx.core.view.isVisible
 import com.beforecar.ad.utils.AppUtils
+import com.beforecar.ad.utils.setVisible
 
 /**
  * @author: wangpan
  * @email: p.wang@aftership.com
  * @date: 2021/5/18
  */
-class HistoryPriceDialog(context: Context) : AlertDialog(context), DialogInterface.OnDismissListener {
+class HistoryPriceDialog(context: Context) : AlertDialog(context),
+    DialogInterface.OnDismissListener {
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
@@ -34,7 +35,9 @@ class HistoryPriceDialog(context: Context) : AlertDialog(context), DialogInterfa
     private var currentProgress: Int = 0
 
     private val hideProgressBar: Runnable by lazy {
-        Runnable { progressBar.isVisible = false }
+        Runnable {
+            progressBar.setVisible(false)
+        }
     }
 
     var url: String = ""
@@ -68,12 +71,13 @@ class HistoryPriceDialog(context: Context) : AlertDialog(context), DialogInterfa
         val webView = WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
         }
-        val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            val dp2 = AppUtils.dp2px(context, 2f).toInt()
-            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, dp2)
-            max = 100
-            progress = 0
-        }
+        val progressBar =
+            ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                val dp2 = AppUtils.dp2px(context, 2f).toInt()
+                layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, dp2)
+                max = 100
+                progress = 0
+            }
         rootView.addView(webView)
         rootView.addView(progressBar)
         this.webView = webView
@@ -83,7 +87,7 @@ class HistoryPriceDialog(context: Context) : AlertDialog(context), DialogInterfa
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView() {
-        progressBar.isVisible = false
+        progressBar.setVisible(false)
         webView.settings.apply {
             javaScriptEnabled = true
             setSupportZoom(true)
@@ -152,7 +156,7 @@ class HistoryPriceDialog(context: Context) : AlertDialog(context), DialogInterfa
     private fun setProgressBarVisibility(show: Boolean) {
         progressBar.removeCallbacks(hideProgressBar)
         if (show) {
-            progressBar.isVisible = true
+            progressBar.setVisible(true)
         } else {
             progressBar.postDelayed(hideProgressBar, 200)
         }

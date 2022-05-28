@@ -11,9 +11,9 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.core.view.isInvisible
-import androidx.core.view.isVisible
 import com.beforecar.ad.utils.AppUtils
+import com.beforecar.ad.utils.setInVisible
+import com.beforecar.ad.utils.setVisible
 
 /**
  * @author: wangpan
@@ -69,7 +69,7 @@ class LoadingDialog(context: Context) : AlertDialog(context) {
         val padding = ((loadingSize - loadingTextWidth) * 0.5f).toInt()
         totalTv.text = loadingText
         totalTv.setPadding(padding, 0, 0, 0)
-        doneTv.isInvisible = true
+        doneTv.setInVisible(true)
     }
 
     @SuppressLint("SetTextI18n")
@@ -82,7 +82,7 @@ class LoadingDialog(context: Context) : AlertDialog(context) {
         val padding = ((loadingSize - totalTextWidth) * 0.5f).toInt()
         totalTv.text = totalText
         totalTv.setPadding(padding, 0, 0, 0)
-        doneTv.isVisible = true
+        doneTv.setVisible(true)
         doneTv.text = doneText
         doneTv.setPadding(padding, 0, 0, 0)
         this.doneCount = doneCount

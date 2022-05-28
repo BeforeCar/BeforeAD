@@ -5,11 +5,11 @@ import android.app.Activity
 import android.app.Application
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.base.getStackInfo
 import com.beforecar.ad.utils.JsonUtils
 import com.beforecar.ad.utils.OkHttp
+import com.beforecar.ad.utils.setVisible
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONObject
@@ -120,7 +120,7 @@ class XunLeiHookPolicy : AbsHookPolicy() {
                             val itemView = XposedHelpers.getObjectField(viewHolder, "itemView") as View
                             val welfarePrizeIv = itemView.findViewById<View>(2131368058)
                             if (welfarePrizeIv != null) {
-                                welfarePrizeIv.isVisible = false
+                                welfarePrizeIv.setVisible(true)
                             }
                         } catch (t: Throwable) {
                             log("removeUserCenterView1 fail: ${t.getStackInfo()}")

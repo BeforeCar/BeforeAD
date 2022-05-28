@@ -304,7 +304,8 @@ abstract class AbsHookPolicy {
 
     fun hookOkHttpCall(
         classLoader: ClassLoader,
-        beforeHookedMethod: (param: XC_MethodHook.MethodHookParam, url: String?) -> Unit
+        beforeHookedMethod: ((param: XC_MethodHook.MethodHookParam, url: String?) -> Unit)? = null,
+        afterHookedMethod: ((param: XC_MethodHook.MethodHookParam, url: String?) -> Unit)? = null
     ) {
         try {
             val parseResponseMethod = findParseResponseMethod(classLoader)
@@ -314,9 +315,21 @@ abstract class AbsHookPolicy {
             }
             XposedBridge.hookMethod(parseResponseMethod, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val okHttpCall = param.thisObject as Any
-                    val url = getUrlFromOkHttpCall(okHttpCall)
-                    beforeHookedMethod.invoke(param, url)
+                    super.beforeHookedMethod(param)
+                    beforeHookedMethod?.run {
+                        val okHttpCall = param.thisObject as Any
+                        val url = getUrlFromOkHttpCall(okHttpCall)
+                        this.invoke(param, url)
+                    }
+                }
+
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    super.afterHookedMethod(param)
+                    afterHookedMethod?.run {
+                        val okHttpCall = param.thisObject as Any
+                        val url = getUrlFromOkHttpCall(okHttpCall)
+                        this.invoke(param, url)
+                    }
                 }
             })
         } catch (t: Throwable) {
