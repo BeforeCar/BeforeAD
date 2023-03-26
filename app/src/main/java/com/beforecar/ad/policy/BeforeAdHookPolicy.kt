@@ -1,5 +1,6 @@
 package com.beforecar.ad.policy
 
+import android.app.AndroidAppHelper
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -19,7 +20,7 @@ class BeforeAdHookPolicy : AbsHookPolicy() {
     override val tag: String = "tag_before_ad"
 
     override fun getPackageName(): String {
-        return "com.beforecar.ad"
+        return AndroidAppHelper.currentPackageName()
     }
 
     override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
@@ -29,7 +30,7 @@ class BeforeAdHookPolicy : AbsHookPolicy() {
     private fun hookAppLogReceiver(classLoader: ClassLoader) {
         try {
             XposedHelpers.findAndHookMethod(
-                "com.beforecar.ad.AppLogReceiver", classLoader,
+                "com.beforecar.ad.log.AppLogReceiver", classLoader,
                 "onReceive", Context::class.java, Intent::class.java,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {

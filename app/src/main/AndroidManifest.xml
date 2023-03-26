@@ -6,8 +6,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/icon_logo"
         android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.BeforeAD">
+        android:supportsRtl="true">
 
         <meta-data
             android:name="xposedmodule"
@@ -27,8 +26,8 @@
 
         <activity
             android:name="com.beforecar.ad.MainActivity"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.BeforeAD.NoActionBar">
+            android:exported="true"
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -38,7 +37,7 @@
 
         <!-- 接收 app log 的广播接收者 -->
         <receiver
-            android:name=".AppLogReceiver"
+            android:name=".log.AppLogReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

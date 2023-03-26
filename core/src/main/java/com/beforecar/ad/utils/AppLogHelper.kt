@@ -17,7 +17,7 @@ object AppLogHelper {
 
     private const val ACTION_APP_LOG = "action_app_log_broadcast"
     private const val RECEIVER_PKG_NAME = "com.beforecar.ad"
-    private const val RECEIVER_CLASS_NAME = "com.beforecar.ad.AppLogReceiver"
+    private const val RECEIVER_CLASS_NAME = "com.beforecar.ad.log.AppLogReceiver"
 
     private const val LOG_TAG = "tag"
     private const val LOG_CONTENT = "content"

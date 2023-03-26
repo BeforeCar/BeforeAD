@@ -1,28 +1,27 @@
 <resources>
     <string name="app_name">BeforeAD</string>
-    <string name="action_settings">Settings</string>
-    <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
-
-    <string name="hello_first_fragment">Hello first fragment</string>
-    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
 
     <string-array name="scope">
         <item>com.beforecar.ad</item>
         <item>cmccwm.mobilemusic</item>
+        <item>com.miui.systemAdSolution</item>
         <item>com.xiaomi.market</item>
+        <item>com.miui.securitycenter</item>
+        <item>com.kelaode.kuaidgebq.orange</item>
+        <item>fengchedongman.apps.com</item>
+        <item>com.drmfab.sks.phoneplayer.debug</item>
+        <item>com.jingdong.app.mall</item>
+        <item>com.android.updater</item>
+        <item>com.hlgys.hlg</item>
+        <item>com.android.updater</item>
+
         <item>com.xiaomi.shop</item>
         <item>com.sina.weibo</item>
         <item>com.tencent.mm</item>
         <item>com.MobileTicket</item>
         <item>com.xiaomi.smarthome</item>
-        <item>com.miui.systemAdSolution</item>
         <item>com.baidu.searchbox</item>
         <item>com.ss.android.article.news</item>
-        <item>com.jingdong.app.mall</item>
         <item>com.xunlei.downloadprovider</item>
         <item>com.sup.android.superb</item>
         <item>com.oppo.store</item>
@@ -32,6 +31,5 @@
         <item>com.taobao.idlefish</item>
         <item>com.mipay.wallet</item>
         <item>tv.danmaku.bili</item>
-        <item>com.android.updater</item>
     </string-array>
 </resources>
