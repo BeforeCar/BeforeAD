@@ -97,8 +97,8 @@ class HistoryPriceDialog(context: Context) : AlertDialog(context),
             loadsImagesAutomatically = true
             domStorageEnabled = true
             databaseEnabled = true
-            setAppCacheEnabled(true)
-            setAppCachePath(context.cacheDir.absolutePath)
+//            setAppCacheEnabled(true)
+//            setAppCachePath(context.cacheDir.absolutePath)
             allowFileAccess = true
             cacheMode = WebSettings.LOAD_DEFAULT
         }

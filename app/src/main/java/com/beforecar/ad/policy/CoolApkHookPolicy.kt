@@ -155,9 +155,6 @@ class CoolApkHookPolicy : AbsHookPolicy() {
     companion object {
         const val CoolMarketApplication = "com.coolapk.market.CoolMarketApplication"
 
-        const val OkHttpCall = "retrofit2.OkHttpCall"
-        const val Response = "retrofit2.Response"
-
         //穿山甲 SDK
         const val TTAdConfig = "com.bytedance.sdk.openadsdk.TTAdConfig"
 

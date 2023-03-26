@@ -8,7 +8,6 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.CallSuper
 import com.beforecar.ad.okhttp.OkHttpHelper
-import com.beforecar.ad.policy.CoolApkHookPolicy
 import com.beforecar.ad.utils.AppLogHelper
 import com.beforecar.ad.utils.AppUtils.isAssignableFromKt
 import de.robv.android.xposed.XC_MethodHook
@@ -287,8 +286,8 @@ abstract class AbsHookPolicy {
 
     fun findParseResponseMethod(classLoader: ClassLoader): Method? {
         try {
-            val okHttpCallCls = XposedHelpers.findClass(CoolApkHookPolicy.OkHttpCall, classLoader)
-            val responseCls = XposedHelpers.findClass(CoolApkHookPolicy.Response, classLoader)
+            val okHttpCallCls = XposedHelpers.findClass(OkHttpCall, classLoader)
+            val responseCls = XposedHelpers.findClass(Response, classLoader)
             for (method in okHttpCallCls.declaredMethods) {
                 if (method.name == "parseResponse"
                     && method.returnType == responseCls
@@ -350,6 +349,7 @@ abstract class AbsHookPolicy {
     companion object {
         const val OkHttpCall = "retrofit2.OkHttpCall"
         const val Response = "retrofit2.Response"
+
     }
 
 }
