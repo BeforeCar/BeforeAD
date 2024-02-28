@@ -14,8 +14,8 @@ class Insta360HookPolicy : AbsHookPolicy() {
         return "com.arashivision.insta360akiko"
     }
 
-    override fun onMainApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
-        super.onMainApplicationBeforeCreate(application, classLoader)
+    override fun onApplicationBeforeCreate(application: Application, classLoader: ClassLoader) {
+        super.onApplicationBeforeCreate(application, classLoader)
 
         val destClass = XposedHelpers.findClass(
             "com.arashivision.insta360.frameworks.ui.view.progressbar.ProgressThumbProvider",
@@ -46,6 +46,33 @@ class Insta360HookPolicy : AbsHookPolicy() {
 //                log("initWorkEdit-workName:${workName}, time:${System.currentTimeMillis() - time}ms")
 //                    log("time:${System.currentTimeMillis() - time}ms")
                     log(Log.getStackTraceString(RuntimeException("getVideoParamsMD5Key")))
+                }
+            })
+        val secureClass = XposedHelpers.findClass(
+            "android.provider.Settings.Secure",
+            classLoader
+        )
+        val contentResolverClass = XposedHelpers.findClass(
+            "android.content.ContentResolver",
+            classLoader
+        )
+        val getStringMethodName = "getString"
+        XposedHelpers.findAndHookMethod(
+            secureClass,
+            getStringMethodName,
+            contentResolverClass,
+            String::class.java,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    super.beforeHookedMethod(param)
+                    log("param?.thisObject:" + param?.thisObject)
+                }
+
+                override fun afterHookedMethod(param: MethodHookParam?) {
+                    super.afterHookedMethod(param)
+                    if (param?.args?.getOrNull(1) == "android_id") {
+                        log(Log.getStackTraceString(RuntimeException("getString")))
+                    }
                 }
             })
 
