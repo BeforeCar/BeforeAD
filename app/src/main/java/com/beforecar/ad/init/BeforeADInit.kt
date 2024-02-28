@@ -1,6 +1,31 @@
 package com.beforecar.ad.init
 
-import com.beforecar.ad.policy.*
+import com.beforecar.ad.policy.BaiduHookPolicy
+import com.beforecar.ad.policy.BeforeAdHookPolicy
+import com.beforecar.ad.policy.BilibiliHookPolicy
+import com.beforecar.ad.policy.BiqugeHookPolicy
+import com.beforecar.ad.policy.CoolApkHookPolicy
+import com.beforecar.ad.policy.DrmfabHookPolicy
+import com.beforecar.ad.policy.FengCheCartoonHookPolicy
+import com.beforecar.ad.policy.HeytapMarketHookPolicy
+import com.beforecar.ad.policy.HeytapThemeHookPolicy
+import com.beforecar.ad.policy.IdleFishHookPolicy
+import com.beforecar.ad.policy.Insta360HookPolicy
+import com.beforecar.ad.policy.JDHookPolicy
+import com.beforecar.ad.policy.MIUIMSAHookPolicy
+import com.beforecar.ad.policy.MIUISecurityCenterHookPolicy
+import com.beforecar.ad.policy.MiAppMarketHookPolicy
+import com.beforecar.ad.policy.MiJiaHookPolicy
+import com.beforecar.ad.policy.MiPayWalletHookPolicy
+import com.beforecar.ad.policy.MiShopHookPolicy
+import com.beforecar.ad.policy.MiUpdaterHookPolicy
+import com.beforecar.ad.policy.MiguMusicADPolicy
+import com.beforecar.ad.policy.MobileTicketHookPolicy
+import com.beforecar.ad.policy.OPPOStoreHookPolicy
+import com.beforecar.ad.policy.PiPiXiaHookPolicy
+import com.beforecar.ad.policy.TouTiaoHookPolicy
+import com.beforecar.ad.policy.WeiBoHookPolicy
+import com.beforecar.ad.policy.WeiXinHookPolicy
 import com.beforecar.ad.policy.base.AbsHookPolicy
 import com.beforecar.ad.policy.douyin.DouyinHookPolicy
 import com.beforecar.ad.policy.hlgys.HlgysHookPolicy
@@ -47,6 +72,7 @@ class BeforeADInit : IXposedHookLoadPackage {
         appPolicies.add(DrmfabHookPolicy())
         appPolicies.add(HlgysHookPolicy())
         appPolicies.add(DouyinHookPolicy())
+        appPolicies.add(Insta360HookPolicy())
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
